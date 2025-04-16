@@ -1,0 +1,94 @@
+/* Background Gradient for the page */
+.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(to right, #34d399, #3b82f6); /* Green to Blue Gradient */
+  }
+  
+  /* Styling the Login Form */
+  .login-form-container {
+    background-color: white;
+    padding: 32px;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 32rem; /* Adjust for responsiveness */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin: 0 1rem;
+    /* Use 'sm:mx-0' on small screens to remove side margins */
+  }
+  
+  /* Header */
+  .login-form-container h1 {
+    font-size: 2.25rem;
+    font-weight: 600;
+    text-align: center;
+    color: #1f2937; /* Dark Gray */
+    margin-bottom: 2rem;
+  }
+  
+  /* Form input fields */
+  .login-form-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db; /* Light Gray Border */
+    font-size: 1.125rem;
+    color: #374151; /* Darker Gray */
+    transition: all 0.3s ease;
+  }
+  
+  .login-form-input:focus {
+    border-color: #3b82f6; /* Blue Border on Focus */
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+  }
+  
+  /* Error message styles */
+  .error-message {
+    color: #dc2626; /* Red color */
+    font-size: 0.875rem;
+    text-align: center;
+    padding: 8px;
+    background-color: #fef2f2;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+  
+  /* Submit Button */
+  .login-form-button {
+    width: 100%;
+    padding: 16px;
+    background-color: #3b82f6; /* Blue Background */
+    color: white;
+    font-weight: 600;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  
+  .login-form-button:hover {
+    background-color: #2563eb; /* Darker Blue on Hover */
+  }
+  
+  .login-form-button:focus {
+    outline: none;
+  }
+  
+  /* Register Link */
+  .register-link {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.875rem;
+    color: #4b5563; /* Light Gray Text */
+  }
+  
+  .register-link a {
+    color: #2563eb; /* Blue Link */
+    text-decoration: underline;
+    font-weight: 500;
+  }
+  
+  .register-link a:hover {
+    text-decoration: none;
+  }
+  

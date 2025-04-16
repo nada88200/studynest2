@@ -1,0 +1,52 @@
+/* @import "tailwindcss"; */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+/* @import "taliwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities"; */
+
+/* :root {
+  --background: #ffffff;
+  --foreground: #171717;}
+
+  @theme inline {
+  
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+} */
+
+input {
+  @apply w-[400px] border border-gray-200 py-2 px-6 bg-zinc-100/40;
+}
+
+@layer components{
+  .nav__link {
+    @apply relative text-xl w-fit block after:block
+     after:content-[''] font-semibold after:absolute 
+     after:h-[3px] after:bg-yellow-400 text-white after:w-full
+      after:scale-x-0 after:hover:scale-x-100 after:transition 
+      after:duration-300 after:origin-right;
+}
+
+}
+
+/* @layer components {
+  .custom-flex {
+    @apply flex items-center space-x-10;
+  }
+} */
+
+  
+ 
