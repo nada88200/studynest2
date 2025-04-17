@@ -17,6 +17,9 @@ import { coursesData } from "@/data/data";
 import Tilt from 'react-parallax-tilt';
 import { FaStar } from "react-icons/fa";
 import { CourseCard } from "@/Home/Courses/CourseCard";
+import { Feature } from "@/Home/Feature/Feature";
+import { FaBriefcase } from "react-icons/fa";
+import {Review} from "@/Home/Review/Review";
 
 export default function HomePage() {
     // const { data: session } = useSession();
@@ -46,10 +49,9 @@ export default function HomePage() {
        <div><Hero/></div>
        <div><About/></div>
        <div><Courses/></div>
-        
-       
-
-
+       <div><Feature/></div>
+       <div><Review/></div>
+      
 
 
 

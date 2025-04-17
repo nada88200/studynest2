@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Nav } from "@/Home/Navbar/Nav";
 
 export default function SettingsPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
-    name: "", // Single name field
+    name: "",
     email: "",
     currentPassword: "",
     newPassword: "",
@@ -21,17 +22,13 @@ export default function SettingsPage() {
 
   const [profileImage, setProfileImage] = useState("/default-profile.png");
 
-  // Fetch user data when session is available
   useEffect(() => {
     if (session) {
-      setFormData({
+      setFormData((prev) => ({
+        ...prev,
         name: session.user?.name || "",
         email: session.user?.email || "",
-        notifications: true,
-        showPersonalInfo: true,
-        language: "English", // Update according to user preferences if saved
-        theme: "normal", // Update according to user preferences if saved
-      });
+      }));
       setProfileImage(session.user?.profileImage || "/default-profile.png");
     }
   }, [session]);
@@ -54,47 +51,44 @@ export default function SettingsPage() {
 
   const handleSave = () => {
     console.log("Saving user data:", formData);
-    router.push("/dashboard"); // Redirect after saving
+    router.push("/dashboard");
   };
 
   if (status === "loading") return <div>Loading...</div>;
 
   return (
-    <div className="settings-page">
-      <main className="settings-form-container bg-indigo-950 text-white p-10">
-        <h1 className="text-3xl font-bold mb-6">Profile</h1>
+    <div>
+        <Nav />
+    <div className="bg-indigo-950 min-h-screen w-full flex justify-center items-center px-4 py-10 pt-40">
+      <main className="bg-white p-6 sm:p-8 md:p-10 rounded-lg shadow-lg w-full max-w-6xl overflow-auto">
+        <h1 className="text-2xl font-semibold mb-6 text-center text-black">Update Your Profile</h1>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* Left Column */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-8">
             {/* Profile Picture */}
-            <section className="p-6 border rounded-lg bg-gray-100 h-full">
-              <h2 className="text-2xl font-semibold mb-4 text-black">Profile Picture</h2>
-              <div className="w-32 h-32 mb-4 rounded-full overflow-hidden border-4 border-gray-700">
+            <section className="p-6 border rounded-lg bg-gray-100">
+              <h2 className="text-xl font-semibold mb-4 text-black">Profile Picture</h2>
+              <div className="w-32 h-32 mb-4 rounded-full overflow-hidden border-2 border-gray-800">
                 <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
               </div>
-              <label className="bg-blue-700 hover:bg-blue-900 px-4 py-2 rounded cursor-pointer text-white">
-                Upload Profile Photo
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleImageChange}
-                />
+              <label className="bg-gray-600 hover:bg-gray-700 px-4 py-2 rounded cursor-pointer text-white text-sm">
+                Upload Photo
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
               </label>
             </section>
 
             {/* Change Password */}
-            <section className="p-6 border rounded-lg bg-gray-100 w-full">
-              <h2 className="text-2xl font-semibold mb-4 text-black">Change Password</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <section className="p-6 border rounded-lg bg-gray-100">
+              <h2 className="text-xl font-semibold mb-4 text-black">Change Password</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <input
                   name="currentPassword"
                   type="password"
                   placeholder="Current Password"
                   value={formData.currentPassword}
                   onChange={handleChange}
-                  className="settings-input w-full min-w-0 bg-pink-700 text-black px-4 py-2 rounded"
+                  className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md"
                 />
                 <input
                   name="newPassword"
@@ -102,7 +96,7 @@ export default function SettingsPage() {
                   placeholder="New Password"
                   value={formData.newPassword}
                   onChange={handleChange}
-                  className="settings-input w-full min-w-0 bg-pink-700 text-black px-4 py-2 rounded"
+                  className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md"
                 />
                 <input
                   name="confirmPassword"
@@ -110,20 +104,20 @@ export default function SettingsPage() {
                   placeholder="Confirm Password"
                   value={formData.confirmPassword}
                   onChange={handleChange}
-                  className="settings-input w-full min-w-0 bg-pink-700 text-black px-4 py-2 rounded"
+                  className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md"
                 />
               </div>
             </section>
 
             {/* Preferences */}
-            <section className="p-6 border rounded-lg bg-gray-100 h-full">
-              <h2 className="text-2xl font-semibold mb-4 text-black">Language & Preferences</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <section className="p-6 border rounded-lg bg-gray-100">
+              <h2 className="text-xl font-semibold mb-4 text-black">Language & Preferences</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <select
                   name="language"
                   value={formData.language}
                   onChange={handleChange}
-                  className="settings-input bg-yellow-700 text-black font-bold"
+                  className="w-full bg-gray-200 text-black px-4 py-2 rounded-md"
                 >
                   <option value="English">English</option>
                   <option value="Arabic">Arabic</option>
@@ -132,7 +126,7 @@ export default function SettingsPage() {
                   name="theme"
                   value={formData.theme}
                   onChange={handleChange}
-                  className="settings-input bg-yellow-700 text-black font-bold"
+                  className="w-full bg-gray-200 text-black px-4 py-2 rounded-md"
                 >
                   <option value="normal">Normal Mode</option>
                   <option value="dark">Dark Mode</option>
@@ -142,17 +136,17 @@ export default function SettingsPage() {
           </div>
 
           {/* Right Column */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-8">
             {/* Basic Info */}
-            <section className="p-6 border rounded-lg bg-gray-100 h-full overflow-hidden">
-              <h2 className="text-2xl font-semibold mb-4 text-black">Basic Info</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <section className="p-6 border rounded-lg bg-gray-100">
+              <h2 className="text-xl font-semibold mb-4 text-black">Basic Info</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <input
                   name="name"
                   placeholder="Full Name"
                   value={formData.name}
                   onChange={handleChange}
-                  className="settings-input bg-blue-500 text-black max-w-full"
+                  className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md"
                 />
                 <input
                   name="email"
@@ -160,21 +154,21 @@ export default function SettingsPage() {
                   placeholder="Email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="settings-input md:col-span-2 bg-blue-500 text-black max-w-full mb-10"
+                  className="w-full bg-gray-200 text-gray-700 px-4 py-2 rounded-md"
                 />
               </div>
             </section>
 
             {/* Privacy Settings */}
-            <section className="p-6 border rounded-lg bg-gray-100 h-full text-left">
-              <h2 className="text-2xl font-semibold mb-4 text-black">Privacy Settings</h2>
+            <section className="p-6 border rounded-lg bg-gray-100">
+              <h2 className="text-xl font-semibold mb-4 text-black">Privacy Settings</h2>
               <label className="flex items-center text-black mb-2">
                 <input
                   type="checkbox"
                   name="notifications"
                   checked={formData.notifications}
                   onChange={handleChange}
-                  className="bg-blue-500 text-black mr-2"
+                  className="mr-2"
                 />
                 Enable Notifications
               </label>
@@ -184,22 +178,22 @@ export default function SettingsPage() {
                   name="showPersonalInfo"
                   checked={formData.showPersonalInfo}
                   onChange={handleChange}
-                  className="bg-blue-500 text-black mr-2"
+                  className="mr-2"
                 />
                 Show Personal Information
               </label>
             </section>
 
             {/* Account Settings */}
-            <section className="p-6 border rounded-lg bg-gray-100 h-full">
-              <h2 className="text-2xl font-semibold mb-4 text-black">Account Settings</h2>
-              <div className="flex flex-col md:flex-row gap-4">
-                <button className="bg-red-700 hover:bg-red-900 px-4 py-2 rounded text-black font-bold">
+            <section className="p-6 border rounded-lg bg-gray-100">
+              <h2 className="text-xl font-semibold mb-4 text-black">Account Settings</h2>
+              <div className="flex flex-col md:flex-row gap-6">
+                <button className="bg-red-700 hover:bg-red-800 text-white px-6 py-3 rounded-md">
                   Delete Account
                 </button>
                 <button
                   onClick={() => signOut()}
-                  className="bg-gray-600 hover:bg-gray-800 px-4 py-2 rounded text-black font-bold"
+                  className="bg-gray-600 hover:bg-gray-800 text-white px-6 py-3 rounded-md"
                 >
                   Sign Out
                 </button>
@@ -208,22 +202,28 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        <div className="mt-8 flex space-x-4">
+        <div className="mt-8 flex justify-center gap-6">
           <button
             onClick={handleSave}
-            className="bg-green-700 hover:bg-green-900 text-black font-bold px-6 py-3 rounded-lg"
+            className="bg-green-800 hover:bg-green-900 text-white font-bold px-8 py-4 rounded-md"
           >
             Save Changes
           </button>
+        </div>
 
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <p className="text-gray-900 text-lg text-center">
+            If you are interested in our company and want to become a teacher, click the button below to apply.
+          </p>
           <button
             onClick={() => router.push("/RequestTeacher")}
-            className="bg-yellow-600 hover:bg-yellow-800 px-6 py-3 rounded-lg text-black font-bold"
+            className="bg-orange-600 hover:bg-orange-700 text-white font-bold px-8 py-4 rounded-md shadow-lg transform transition duration-300 hover:scale-105"
           >
             Become a Teacher
           </button>
         </div>
       </main>
+    </div>
     </div>
   );
 }
