@@ -1,10 +1,13 @@
 /* Background Gradient for the page */
 .login-page {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background: linear-gradient(to right, #34d399, #3b82f6); /* Green to Blue Gradient */
+   display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-image: url('/images/jusr_librrr.webp'); /* Replace with your actual image path */
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   }
   
   /* Styling the Login Form */

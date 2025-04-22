@@ -31,7 +31,7 @@ export const Nav = () => {
     return (
         <div className={`fixed ${navbg?'bg-indigo-800':'fixed'} w-full h-[12vh] z-[1000]  transition-all duration-200`}>
         <div className="flex items-center justify-between h-full w-[90%] mx-auto xl:w-[80%]">
-         <Image src="/images/logo.png" alt="Logo" width={120} height={120}/>
+         <Image src="/images/logo2.png" alt="Logo" width={120} height={120}/>
          <div className="hidden lg:flex items-center space-x-10">
         {navLinks.map((link) => {
             return(

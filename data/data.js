@@ -75,6 +75,7 @@ export const coursesData = [
       reaction: 45,
       coverImage: "/images/b1.jpg",
       title: "Understanding JavaScript",
+      content:"JavaScript is a versatile programming language that allows developers to create dynamic and interactive web applications. In this article, we will explore the fundamentals of JavaScript, including variables, functions.",
     },
     {
       id: 2,
@@ -83,6 +84,7 @@ export const coursesData = [
       reaction: 78,
       coverImage: "/images/b2.jpg",
       title: "A Guide to Node.js Event Loop",
+      content:"Node.js is built on a single-threaded, non-blocking I/O model that makes it lightweight and efficient. In this article, we will delve into the Node.js event loop, understanding how it works and its significance in asynchronous programming.",
     },
     {
       id: 3,
@@ -91,5 +93,6 @@ export const coursesData = [
       reaction: 62,
       coverImage: "/images/b3.jpg",
       title: "Introduction to React Hooks",
+      content:"React Hooks are functions that let you use state and other React features without writing a class. In this article, we will cover the basics of React Hooks, including useState and useEffect, and how they can simplify your code.",
     },
   ];

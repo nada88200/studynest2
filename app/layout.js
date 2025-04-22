@@ -1,6 +1,9 @@
 import { Geist, Geist_Mono ,Space_Grotesk} from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "./providers";
+import { Footer } from "@/Home/Footer/Footer";
+import ThemeLoader from "./ThemeLoader";
+import ThemeToggle from "../components/ThemeToggle"; 
 
 // const geistSans = Geist({
 //   variable: "--font-geist-sans",
@@ -25,13 +28,15 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body
-        className={font.className}
-      >
+     <body className={`${font.className} bg-white dark:bg-gray-900 transition-colors`}>
         <AuthProvider>
+        <ThemeLoader />
+        <ThemeToggle /> 
         {children}
+        <Footer />
         </AuthProvider>
       </body>
     </html>
   );
 }
+

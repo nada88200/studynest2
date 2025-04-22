@@ -1,17 +1,17 @@
-
-// design 5
 "use client";
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { coursesData } from "@/data/data"; // Replace with your actual path
-import {Nav} from "@/Home/Navbar/Nav";
+import { coursesData } from "@/data/data";
+import { Nav } from "@/Home/Navbar/Nav";
+import Image from "next/image";
+import Tilt from "react-parallax-tilt";
+import { FaStar } from "react-icons/fa";
+import { FaFile } from "react-icons/fa";
+import { FaUserGroup } from "react-icons/fa6";
 
-// Simulate current user role
 const currentUserRole = "admin";
 
 export default function CoursesPage() {
-  const [courses, setCourses] = useState([]);
-  const [myCourses, setMyCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState("title");
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -25,49 +25,15 @@ export default function CoursesPage() {
     reviewNumber: "",
     image: "",
   });
+  const [courses, setCourses] = useState([]);
 
   const router = useRouter();
 
   useEffect(() => {
     setCourses(coursesData);
-
-    // Dummy user-specific courses
-    setMyCourses([
-      {
-        id: 1,
-        title: "React for Beginners",
-        category: "Programming",
-        price: 19.99,
-        author: "John Doe",
-        lessons: 10,
-        students: 200,
-        reviewNumber: 4.5,
-        image: "https://via.placeholder.com/200",
-      },
-      {
-        id: 2,
-        title: "Advanced JavaScript",
-        category: "Programming",
-        price: 29.99,
-        author: "Jane Smith",
-        lessons: 15,
-        students: 150,
-        reviewNumber: 4.8,
-        image: "https://via.placeholder.com/200",
-      },
-      {
-        id: 3,
-        title: "Web Design Fundamentals",
-        category: "Design",
-        price: 9.99,
-        author: "Mark Lee",
-        lessons: 12,
-        students: 100,
-        reviewNumber: 4.2,
-        image: "https://via.placeholder.com/200",
-      },
-    ]);
   }, []);
+
+  const categories = ["All", ...new Set(coursesData.map((c) => c.category))];
 
   const filteredCourses = courses
     .filter((course) =>
@@ -82,12 +48,6 @@ export default function CoursesPage() {
         : a[sortBy] - b[sortBy]
     );
 
-  const categories = ["All", ...new Set(coursesData.map((c) => c.category))];
-
-  const handleBack = () => {
-    router.push("/dashboard");
-  };
-
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewCourse((prev) => ({ ...prev, [name]: value }));
@@ -95,13 +55,9 @@ export default function CoursesPage() {
 
   const handleAddCourse = (e) => {
     e.preventDefault();
-
-    const course = {
-      ...newCourse,
-      id: courses.length + 1,
-    };
-
-    setCourses((prevCourses) => [...prevCourses, course]);
+    const newId = courses.length + 1;
+    const course = { ...newCourse, id: newId };
+    setCourses((prev) => [...prev, course]);
     setNewCourse({
       title: "",
       category: "",
@@ -116,169 +72,255 @@ export default function CoursesPage() {
 
   return (
     <div>
-        <Nav />
-    <div className="bg-indigo-950 text-white p-8 min-h-screen pt-20">
-      <h1 className="text-4xl font-bold mb-8">All Courses</h1>
+      <Nav />
+      <div className="pt-20 pb-12 relative bg-gradient-to-br from-indigo-900 to-purple-800 min-h-screen">
+        {/* Bouncing Image */}
+        <Image
+          src="/images/cb.png"
+          alt="bg image"
+          width={800}
+          height={800}
+          className="absolute top-[30%] animate-bounce"
+        />
 
-      {/* <div className="flex justify-end mb-6">
-        <button
-          onClick={handleBack}
-          className="bg-gray-700 hover:bg-gray-900 text-white font-bold px-6 py-3 rounded-lg"
-        >
-          Back to Dashboard
-        </button>
-      </div> */}
+        <div className="w-[80%] pt-8 pb-8 mx-auto relative z-10">
+          <h1 className="text-4xl md:text-5xl text-gray-900 font-bold mb-6">
+            All Courses
+          </h1>
 
-      {currentUserRole === "admin" && (
-        <div className="bg-white text-black p-6 rounded-lg shadow-lg mb-8">
-          <h2 className="text-2xl font-semibold mb-4">Add New Course</h2>
-          <form onSubmit={handleAddCourse}>
-            <div className="flex flex-col gap-4">
-              {[
-                { name: "title", placeholder: "Course Title" },
-                { name: "author", placeholder: "Author" },
-                { name: "category", placeholder: "Category" },
-                { name: "price", placeholder: "Price", type: "number" },
-                { name: "lessons", placeholder: "Lessons", type: "number" },
-                { name: "students", placeholder: "Students", type: "number" },
-                { name: "reviewNumber", placeholder: "Reviews", type: "number" },
-                { name: "image", placeholder: "Image URL" },
-              ].map(({ name, placeholder, type = "text" }) => (
-                <input
-                  key={name}
-                  type={type}
-                  name={name}
-                  value={newCourse[name]}
-                  onChange={handleInputChange}
-                  placeholder={placeholder}
-                  className="p-2 rounded text-black"
-                  required
-                />
-              ))}
+          {/* Admin Form */}
+          {/* Admin Form */}
+{/* Admin Form */}
+{currentUserRole === "admin" && (
+  <div className="bg-gradient-to-br from-purple-600 to-indigo-800 p-8 rounded-2xl shadow-2xl mb-12 text-white">
+    <h2 className="text-4xl font-bold mb-8">Add New Course</h2>
+    <form onSubmit={handleAddCourse} className="grid grid-cols-1 md:grid-cols-2 gap-8">
 
-              <button
-                type="submit"
-                className="mt-4 bg-green-700 hover:bg-green-900 text-white font-bold px-6 py-3 rounded-lg"
-              >
-                Add Course
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* My Courses */}
-      <div className="mb-8">
-        <h2 className="text-3xl font-semibold mb-4">My Courses</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {myCourses.map((course) => (
-            <CourseCard key={course.id} course={course} />
-          ))}
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      {/* Title Input */}
+      <div className="flex flex-col">
+        <label className="text-xl font-semibold mb-2">Course Title</label>
         <input
           type="text"
-          placeholder="Search courses..."
-          className="p-2 rounded text-black w-full md:w-1/3"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          name="title"
+          value={newCourse.title}
+          onChange={handleInputChange}
+          placeholder="Enter Course Title"
+          className="p-4 rounded-lg w-full bg-white/10 text-white border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-purple-600 focus:border-transparent placeholder:text-white/70"
+          required
         />
-        <select
-          className="p-2 rounded text-black"
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-        >
-          <option value="title">Sort by Title</option>
-          <option value="price">Sort by Price</option>
-          <option value="students">Sort by Students</option>
-        </select>
-        <select
-          className="p-2 rounded text-black"
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
-        >
-          {categories.map((cat) => (
-            <option key={cat}>{cat}</option>
-          ))}
-        </select>
       </div>
 
-      {/* All Courses */}
-      <h2 className="text-3xl font-semibold mb-4">All Courses</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCourses.map((course) => (
-          <CourseCard key={course.id} course={course} />
-        ))}
+      {/* Author Input */}
+      <div className="flex flex-col">
+        <label className="text-xl font-semibold mb-2">Author</label>
+        <input
+          type="text"
+          name="author"
+          value={newCourse.author}
+          onChange={handleInputChange}
+          placeholder="Enter Author's Name"
+          className="p-4 rounded-lg w-full bg-white/10 text-white border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-purple-600 focus:border-transparent placeholder:text-white/70"
+          required
+        />
       </div>
-    </div>
+
+      {/* Category Input */}
+      <div className="flex flex-col">
+        <label className="text-xl font-semibold mb-2">Category</label>
+        <input
+          type="text"
+          name="category"
+          value={newCourse.category}
+          onChange={handleInputChange}
+          placeholder="Enter Category"
+          className="p-4 rounded-lg w-full bg-white/10 text-white border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-purple-600 focus:border-transparent placeholder:text-white/70"
+          required
+        />
+      </div>
+
+      {/* Price Input */}
+      <div className="flex flex-col">
+        <label className="text-xl font-semibold mb-2">Price</label>
+        <input
+          type="number"
+          name="price"
+          value={newCourse.price}
+          onChange={handleInputChange}
+          placeholder="Enter Course Price"
+          className="p-4 rounded-lg w-full bg-white/10 text-white border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-purple-600 focus:border-transparent placeholder:text-white/70"
+          required
+        />
+      </div>
+
+      {/* Lessons Input */}
+      <div className="flex flex-col">
+        <label className="text-xl font-semibold mb-2">Number of Lessons</label>
+        <input
+          type="number"
+          name="lessons"
+          value={newCourse.lessons}
+          onChange={handleInputChange}
+          placeholder="Enter Number of Lessons"
+          className="p-4 rounded-lg w-full bg-white/10 text-white border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-purple-600 focus:border-transparent placeholder:text-white/70"
+          required
+        />
+      </div>
+
+      {/* Image Upload */}
+      <div className="flex flex-col">
+        <label className="text-xl font-semibold mb-2">Course Image</label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={(e) =>
+            setNewCourse((prev) => ({
+              ...prev,
+              image: URL.createObjectURL(e.target.files[0]),
+            }))
+          }
+          className="p-3 bg-white/20 rounded-lg text-white hover:bg-white/30 transition duration-300 focus:outline-none focus:ring-4 focus:ring-purple-600"
+          required
+        />
+        {newCourse.image && (
+          <div className="mt-4 p-2 border-2 border-white/40 rounded-lg">
+            <img
+              src={newCourse.image}
+              alt="Course Preview"
+              className="w-40 h-40 object-cover rounded-lg shadow-lg"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Slides/Video Upload */}
+      <div className="flex flex-col">
+        <label className="text-xl font-semibold mb-2">Slides / Video</label>
+        <input
+          type="file"
+          accept=".pdf,.ppt,.pptx,video/*"
+          onChange={(e) => {
+            const file = e.target.files[0];
+            console.log("Slides/Video file:", file.name);
+          }}
+          className="p-3 bg-white/20 rounded-lg text-white hover:bg-white/30 transition duration-300 focus:outline-none focus:ring-4 focus:ring-purple-600"
+        />
+      </div>
+
+      {/* Submit Button */}
+      <div className="col-span-2 flex justify-center mt-8">
+        <button
+          type="submit"
+          className="bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-xl transition duration-300 transform hover:scale-105"
+        >
+          Add Course
+        </button>
+      </div>
+    </form>
+  </div>
+)}
+
+
+
+
+          {/* Filters */}
+          <div className="flex flex-col md:flex-row gap-4 mb-10">
+            <input
+              type="text"
+              placeholder="Search courses..."
+              className="p-2 rounded text-black w-full md:w-1/3"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <select
+              className="p-2 rounded text-black"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+            >
+              <option value="title">Sort by Title</option>
+              <option value="price">Sort by Price</option>
+              <option value="students">Sort by Students</option>
+            </select>
+            <select
+              className="p-2 rounded text-black"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              {categories.map((cat) => (
+                <option key={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Courses */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-10">
+            {filteredCourses.map((course) => (
+              <CourseCard key={course.id} course={course} />
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
 
-// Reusable Course Card
-const CourseCard = ({ course }) => (
-  <div className="bg-white text-black rounded-lg overflow-hidden shadow-lg">
-    <img
-      src={course.image}
-      alt={course.title}
-      className="w-full h-40 object-cover"
-    />
-    <div className="p-4">
-      <h2 className="text-xl font-semibold">{course.title}</h2>
-      <p className="text-gray-700 mb-2">By {course.author}</p>
-      <p className="text-sm mb-1">Category: {course.category}</p>
-      <p className="text-sm">Lessons: {course.lessons}</p>
-      <p className="text-sm">Students: {course.students}</p>
-      <p className="text-sm">Reviews: {course.reviewNumber}</p>
-      <p className="text-lg font-bold mt-2">${course.price}</p>
-      <button className="mt-4 bg-blue-700 hover:bg-blue-900 px-4 py-2 text-white rounded">
-        View Details
-      </button>
-    </div>
-  </div>
-  
-);
-const addCourse = async () => {
-  const courseData = {
-    title: "Advanced React",
-    description: "Learn advanced concepts of React",
-    category: "Development",
-    instructor: "instructorId",  // Replace with a valid ObjectId of a user
-    duration: "4 weeks",
-    level: "advanced",
-    price: 100,
-    language: "English",
-    materials: [
-      {
-        title: "React Video 1",
-        type: "video",
-        url: "https://example.com/video1"
-      }
-    ]
-  };
+// Course Card Component
+const CourseCard = ({ course }) => {
+  return (
+    <Tilt>
+      <div className="bg-white rounded-lg overflow-hidden cursor-pointer shadow-lg">
+        {/* Image */}
+        <div>
+          <Image
+            src={course.image}
+            alt={course.title}
+            width={400}
+            height={400}
+            className="w-full h-full"
+          />
+        </div>
 
-  try {
-    const response = await fetch("http://localhost:3000/api/courses", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(courseData),
-    });
+        <div className="p-4">
+          {/* Price */}
+          <h1 className="ml-auto relative z-[10] h-20 w-20 flex items-center text-lg font-bold justify-center 
+                flex-col mt-[-4rem] rounded-full bg-rose-700 text-white">${course.price}</h1>
 
-    const data = await response.json();
-    if (response.ok) {
-      console.log("Course added:", data);
-    } else {
-      console.log("Error:", data.message);
-    }
-  } catch (error) {
-    console.error("Error adding course:", error);
-  }
+          {/* Info */}
+          <div className="flex items-center mt-6 space-x-4">
+            <span className="text-lg text-black text-opacity-70 font-bold">{course.category}</span>
+            <span className="text-base text-gray-600">{course.author}</span>
+          </div>
+
+          {/* Title */}
+          <h1 className="text-lg text-black font-bold mt-2">{course.title}</h1>
+
+          {/* Reviews */}
+          <div className="flex items-center mt-2 space-x-2">
+            <div className="flex items-center">
+              {Array(5).fill(0).map((_, i) => (
+                <FaStar key={i} className="w-4 h-4 text-yellow-600" />
+              ))}
+            </div>
+            <span className="text-base text-orange-800 font-semibold">
+              ({course.reviewNumber} Reviews)
+            </span>
+          </div>
+
+          {/* Divider */}
+          <div className="mt-6 mb-6 w-full h-[2px] bg-gray-500 opacity-15"></div>
+
+          {/* Stats */}
+          <div className="flex mb-8 items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <FaFile className="w-4 h-4 text-orange-600" />
+              <p className="text-base font-semibold text-gray-800">{course.lessons} Lessons</p>
+            </div>
+            <div className="flex items-center space-x-2">
+              <FaUserGroup className="w-4 h-4 text-orange-600" />
+              <p className="text-base font-semibold text-gray-800">{course.students} Students</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Tilt>
+  );
 };
-
-// Call addCourse function to send the request
-addCourse();

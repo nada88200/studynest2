@@ -33,10 +33,11 @@ export default function RequestTeacherForm() {
 
   return (
     <form
-      onSubmit={handleSubmit}
-      className="bg-white text-black p-8 rounded-lg shadow-md w-full max-w-md"
-    >
-      <h1 className="text-2xl font-bold mb-6 text-center">
+  onSubmit={handleSubmit}
+  className="custom-form bg-white text-black p-8 rounded-lg shadow-md w-full max-w-md dark:bg-zinc-900 dark:text-white"
+>
+
+      <h1 className="text-2xl font-bold mb-6 text-center  ">
         Request to Become a Teacher
       </h1>
 

@@ -26,6 +26,11 @@ const userSchema = new Schema(
         message: "Password must contain at least one letter",
       },
     },
+    role: {
+      type: String,
+      enum: ["admin", "tutor", "user"],
+      default: "user",
+    },
   },
   { timestamps: true }
 );

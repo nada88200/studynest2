@@ -22,17 +22,17 @@ export const navLinks = [
     },
     {
       id: 5,
-      url: "#",
+      url: "/archive",
       label: "Archive",
     },
     {
       id: 6,
-      url: "#",
+      url: "/notifications",
       label: "Notifications",
     },
     {
       id: 7,
-      url: "#",
+      url: "/notes",
       label: "Notes",
     },
     {

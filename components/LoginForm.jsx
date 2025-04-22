@@ -27,6 +27,7 @@ export default function LoginForm() {
         password,
         redirect: false,
       });
+      console.log("ndoosh",session);
 
       if (res.error) {
         setError("Invalid credentials");

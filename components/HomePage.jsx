@@ -20,6 +20,12 @@ import { CourseCard } from "@/Home/Courses/CourseCard";
 import { Feature } from "@/Home/Feature/Feature";
 import { FaBriefcase } from "react-icons/fa";
 import {Review} from "@/Home/Review/Review";
+import { BsQuote } from "react-icons/bs";
+import Carousel from 'react-multi-carousel';
+import 'react-multi-carousel/lib/styles.css';
+import SliderCard from "@/Helper/SliderCard";
+import {Article} from "@/Home/Article/Article";
+import {Footer} from "@/Home/Footer/Footer";
 
 export default function HomePage() {
     // const { data: session } = useSession();
@@ -42,6 +48,27 @@ export default function HomePage() {
     //         };
     //     }
     //     , []);
+
+    // const responsive = {
+    //     superLargeDesktop: {
+    //       // the naming can be any, depends on you.
+    //       breakpoint: { max: 4000, min: 3000 },
+    //       items: 5
+    //     },
+    //     desktop: {
+    //       breakpoint: { max: 3000, min: 1324 },
+    //       items: 1,
+    //       slidesToSlide: 1 // optional, default to 1.
+    //     },
+    //     tablet: {
+    //       breakpoint: { max: 1324, min: 764 },
+    //       items: 1
+    //     },
+    //     mobile: {
+    //       breakpoint: { max: 764, min: 0 },
+    //       items: 1
+    //     }
+    //   };
     return (
 
         <div>
@@ -51,8 +78,11 @@ export default function HomePage() {
        <div><Courses/></div>
        <div><Feature/></div>
        <div><Review/></div>
+       <div><Article/></div>
+      
       
 
+      
 
 
         </div>
