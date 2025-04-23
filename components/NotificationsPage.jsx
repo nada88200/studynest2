@@ -47,11 +47,11 @@ export default function NotificationsPage() {
     <div>
   <Nav />
 
-  <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-800 flex items-center justify-center px-4 py-12">
+  <div className="min-h-screen bg-gradient-to-br from-indigo-900 to-purple-800 dark:from-[#2d3748] dark:to-[#2d3748] flex items-center justify-center px-4 py-12">
     <div className="max-w-3xl w-full bg-white shadow-xl rounded-2xl p-8 border border-gray-200">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-extrabold text-[#0e139d]">
-          Hello {session?.user?.name || "Guest"}
+          Hello {session?.user?.name || "user"}
         </h1>
 
         <div className="relative">
@@ -67,7 +67,7 @@ export default function NotificationsPage() {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold text-gray-800">Notifications</h2>
         <button
-          className="text-sm font-medium text-[#0e139d] hover:text-[#c6c311] transition"
+          className="text-sm font-medium text-[#0e139d] hover:text-[#c6c311] transition dark:text-white dark:hover:text-[#c6c311]"
           onClick={markAllAsRead}
         >
           Mark all as read
@@ -81,10 +81,10 @@ export default function NotificationsPage() {
           {notifications.map((notif) => (
             <li
               key={notif.id}
-              className={`p-4 rounded-xl border flex justify-between items-start shadow-sm transition ${
+              className={`p-4 rounded-xl border flex justify-between items-start shadow-sm transition  ${
                 notif.read
-                  ? "bg-gray-100 border-gray-200"
-                  : "bg-[#eef0ff] border-[#c6c311]"
+                ? "bg-[#f0f4ff] border-2 border-[#b7b9ff] dark:bg-[#1e2235]  dark:border dark:border-white"
+                : "bg-[#eef0ff] border border-[#c6c311] dark:bg-[#1e2235] dark:border-2  dark:border-[#4646b8]"                
               }`}
             >
               <div>

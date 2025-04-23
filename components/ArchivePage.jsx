@@ -62,8 +62,8 @@ const [activeTagFilter, setActiveTagFilter] = useState("Uncategorized"); // For 
     return (
         <div>
         <Nav />
-<div className="min-h-screen pt-[12vh] bg-gradient-to-br from-indigo-900 to-purple-800 px-6 md:px-12 text-white">
-      <h1 className="text-4xl font-bold mb-6 text-center">🗃️ Archive Manager</h1>
+        <div className="bg-gradient-to-br from-indigo-900 to-purple-800 dark:from-[#2d3748] dark:to-[#2d3748] min-h-screen w-full px-6 md:px-12 pt-[12vh] text-white">
+        <h1 className="text-4xl font-bold mb-6 text-center">🗃️ Archive Manager</h1>
       <div className="flex flex-col md:flex-row gap-4 mb-4 items-start md:items-center">
   <input
     type="text"

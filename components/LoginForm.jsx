@@ -27,20 +27,21 @@ export default function LoginForm() {
         password,
         redirect: false,
       });
-      console.log("ndoosh",session);
 
       if (res.error) {
         setError("Invalid credentials");
         return;
       }
-      if(session.user.role === "admin") {
-         router.push("/adminDashboard");
-      } else if(session.user.role === "tutor") {
-         router.push("/tutorDashboard");
-       }
-       else {
-         router.push("/dashboard");
-       }
+      // if(session.user.role === "admin") {
+      //    router.push("/adminDashboard");
+      // } else if(session.user.role === "tutor") {
+      //    router.push("/tutorDashboard");
+      //  }
+      //  else {
+      //    router.push("/dashboard");
+      //  }
+
+      router.push("/dashboard");
         
       //router.replace("dashboard");
     } catch (error) {

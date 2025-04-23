@@ -1,7 +1,7 @@
 /* @import "tailwindcss"; */
-@tailwind base;
+/* @tailwind base;
 @tailwind components;
-@tailwind utilities;
+@tailwind utilities; */
 
 
 /* @import "taliwindcss/base";
@@ -27,7 +27,7 @@
   }
 } */
 
-input {
+/* input {
   @apply w-[400px] border border-gray-200 py-2 px-6 bg-zinc-100/40;
 }
 
@@ -57,7 +57,7 @@ input {
   html.dark .custom-form {
     @apply bg-zinc-900 text-black;
   }
-}
+} */
 /* @layer components {
   .custom-flex {
     @apply flex items-center space-x-10;
@@ -115,7 +115,7 @@ input {
     @apply flex items-center space-x-10;
   }
 } */
-div {
+/* div {
   color: black; 
 }
 
@@ -156,4 +156,167 @@ html.dark span,
 html.dark a,
 html.dark li {
   color: white; 
+} */
+
+
+
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* General transition for background and text colors */
+html {
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Default light mode styles */
+html {
+  background-color: #f7fafc; /* Light background */
+  color: black; /* Dark text */
+}
+
+/* Dark mode styles */
+html.dark {
+  background-color: #1a202c; /* Dark background */
+  color: white; /* White text */
+}
+
+/* Dark mode styling for all divs inside dark mode */
+html.dark div {
+  background-color: #2d3748; /* Dark background for all divs in dark mode */
+  color: white; /* White text in div */
+}
+
+/* Specific styling for navigation */
+nav {
+  background-color: #3b82f6; /* Light blue for nav */
+  color: white;
+}
+
+html.dark nav {
+  background-color: #2b6cb0; /* Darker blue for nav */
+  color: white;
+}
+
+/* Headings in dark mode */
+html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6 {
+  color: white;
+}
+
+/* Paragraph text color in dark mode */
+html.dark p {
+  color: #e2e8f0; /* Light gray text for paragraphs in dark mode */
+}
+
+/* Note card styles */
+html.dark .note-card {
+  background-color: #2d3748; /* Dark background for cards */
+  color: white; /* White text */
+}
+
+/* Note card styling for nested divs */
+html.dark .note-card div {
+  background-color: #4a5568; /* Slightly lighter dark color for nested divs */
+  color: white;
+}
+
+@layer components {
+  /* Navigation link styling */
+  .nav__link {
+    @apply relative text-xl w-fit block after:block
+      after:content-[''] font-semibold after:absolute 
+      after:h-[3px] after:bg-yellow-400 text-white after:w-full
+      after:scale-x-0 after:hover:scale-x-100 after:transition 
+      after:duration-300 after:origin-right;
+  }
+.footer__heading {
+    @apply text-lg text-white font-bold mb-4;  
+  }
+  
+  .footer__link {
+    @apply text-sm text-white hover:text-green-700 cursor-pointer text-opacity-60 mb-3 w-fit;
+  
+  }
+
+
+  /* Custom form styling */
+  .custom-form {
+    @apply bg-white text-black p-6 rounded-lg shadow-md;
+  }
+
+  /* Dark mode for custom form */
+  html.dark .custom-form {
+    @apply bg-zinc-900 text-white; /* Dark background and white text */
+  }
+
+  /* Tags styling */
+  .tags {
+    @apply flex flex-wrap gap-2;
+  }
+
+  .tags span {
+    @apply bg-blue-500 text-white py-1 px-3 rounded-full text-sm;
+  }
+
+  /* Dark mode tags */
+  html.dark .tags span {
+    @apply bg-blue-400; /* Lighter blue for tags in dark mode */
+  }
+
+  /* File upload link styling */
+  .file-upload a {
+    @apply text-blue-600 hover:text-blue-800;
+  }
+
+  /* Dark mode file upload link */
+  html.dark .file-upload a {
+    @apply text-blue-400 hover:text-blue-500; /* Lighter blue for file upload links in dark mode */
+  }
+
+  /* Notification card styles */
+  .note-card {
+    @apply p-4 bg-white rounded-lg shadow-md;
+  }
+
+  /* Dark mode notification card */
+  html.dark .note-card {
+    @apply bg-zinc-800; /* Dark background for note cards */
+  }
+
+  /* Note card actions styling */
+  .note-card .note-actions {
+    @apply flex justify-between items-center;
+  }
+
+  /* Dark mode note card actions */
+  html.dark .note-card .note-actions {
+    @apply text-white;
+  }
+}
+/* Default gradient for light mode */
+main {
+  background: linear-gradient(to bottom right, #4c51bf, #9f7aea); /* From indigo to purple */
+}
+
+/* Dark mode gradient */
+html.dark main {
+  background: linear-gradient(to bottom right, #2d3748, #1a202c); /* From gray-800 to gray-900 */
+}
+/* Light mode styles for table */
+table {
+  @apply min-w-full table-auto border border-gray-300 text-lg;
+}
+
+/* Dark mode styles for table */
+html.dark table {
+  @apply border-gray-700 bg-gray-800 text-white; /* Dark border, background, and text */
+}
+html.dark th {
+  color: #000000; /* Black text for table headers in dark mode */
+}
+/* Dark mode background and text styles for the div */
+html.dark div:not(.login-page) {
+  background: #1a202c;
+  color: white;
 }

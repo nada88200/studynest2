@@ -9,12 +9,13 @@ export default async function Dashboard() {
     const session = await getServerSession(authOptions);
 
     if (!session) {
-      redirect("/"); // Redirect to login if no session
-    } else if (session.user.role === "tutor") {
-      redirect("/tutorDashboard");
-    } else if (session.user.role === "admin") {
-      redirect("/adminDashboard");
-    }
+      redirect("/"); 
+    }// Redirect to login if no session
+    // } else if (session.user.role === "tutor") {
+    //   redirect("/tutorDashboard");
+    // } else if (session.user.role === "admin") {
+    //   redirect("/adminDashboard");
+    // }
 
     return <HomePage />;
 }

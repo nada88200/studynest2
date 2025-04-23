@@ -29,7 +29,7 @@ export default function SettingsPage() {
         name: session.user?.name || "",
         email: session.user?.email || "",
       }));
-      setProfileImage(session.user?.profileImage || "/images/default-profile.jpeg");;
+      setProfileImage(session.user?.profileImage || "/images/default-profile.jpeg");
     }
   }, [session]);
 
@@ -86,7 +86,7 @@ export default function SettingsPage() {
   return (
     <div>
       <Nav />
-      <div className="bg-gradient-to-br from-indigo-900 to-purple-800 min-h-screen w-full flex justify-center items-center px-4 py-10 pt-40">
+      <div className="bg-gradient-to-br from-indigo-900 to-purple-800 dark:from-[#2d3748] dark:to-[#2d3748] min-h-screen w-full flex justify-center items-center px-4 py-10 pt-40">
         <main className="bg-white dark:bg-gray-900 p-6 sm:p-8 md:p-10 rounded-lg shadow-lg w-full max-w-6xl overflow-auto">
           <h1 className="text-2xl font-semibold mb-6 text-center text-black dark:text-white">Update Your Profile</h1>
 
