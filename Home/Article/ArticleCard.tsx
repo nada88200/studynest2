@@ -2,6 +2,7 @@ import React from "react";
 import Image from "next/image";
 import { BiHeart } from "react-icons/bi";
 import Tilt from 'react-parallax-tilt';
+import { useRouter } from "next/navigation";
 
 type Props = {
     article:{
@@ -17,6 +18,7 @@ type Props = {
 
 
 export const ArticleCard = ({article} :Props) => {
+    const router = useRouter();
 
     return (
         <Tilt>
@@ -50,7 +52,7 @@ export const ArticleCard = ({article} :Props) => {
                 {/* heading */}
                 <h1 className="mt-4 mb-4 text-xl font-semibold"></h1>
                 <p className="text-base text-gray-700"> {article.content}</p>
-                <button className="mt-4 mb-3 hover:text-green-600 text-lg text-black font-bold underline">Learn More</button>
+                <button onClick={() => router.push("/individualarticle")} className="mt-4 mb-3 hover:text-green-600 text-lg text-black font-bold underline">Learn More</button>
             </div>
         </div>
         </Tilt>

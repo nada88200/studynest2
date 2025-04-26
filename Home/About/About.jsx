@@ -1,7 +1,10 @@
+"use client";
 import React from "react";
 import { FaArrowRight, FaAward } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 
 export const About = () => {
+    const router = useRouter();
   return (
     <div className="pt-16 pb-16">
               {/* define grid */}
@@ -22,7 +25,8 @@ export const About = () => {
                        at any time. With interactive courses, a vibrant learning community, and personalized tools, 
                        StudyNest empowers students to reach their academic goals with ease and flexibility.
                       </p>
-                      <button className="flex items-center space-x-2 px-8 py-3 mt-8 hover:bg-gray-700 transition-all duration-200 rounded-3xl bg-black text-white">
+                      <button onClick={() => router.push("/aboutus")}
+                       className="flex items-center space-x-2 px-8 py-3 mt-8 hover:bg-gray-700 transition-all duration-200 rounded-3xl bg-black text-white">
                           <span>learn more</span>
                           <FaArrowRight />
                       </button>

@@ -25,7 +25,9 @@ import { FiX } from "react-icons/fi";
 
 
 export default function NotesPage() {
-  
+  const [showEditor, setShowEditor] = useState(false);
+  const [tagInput, setTagInput] = useState("");
+
     const [notes, setNotes] = useState([]);
     const [selectedNoteIndex, setSelectedNoteIndex] = useState(null);
     const [noteForm, setNoteForm] = useState({
@@ -40,13 +42,30 @@ export default function NotesPage() {
     const resetForm = () => {
       setNoteForm({ title: "", content: "", todos: [], tags: [], files: [] });
       setSelectedNoteIndex(null);
+      setShowEditor(true);
     };
+    
   
     const handleSaveNote = () => {
-      if (!noteForm.title.trim()) return;
-  
-      const newNote = { ...noteForm };
-  
+      if (!noteForm.tags.length || tagInput.trim()) {
+        alert("Please add at least one tag and press Enter before saving.");
+        return;
+      }
+    
+      let baseTitle = noteForm.title.trim() || "Untitled Note";
+      let title = baseTitle;
+      let counter = 1;
+    
+      const existingTitles = notes.map((note, idx) =>
+        selectedNoteIndex === idx ? null : note.title
+      );
+    
+      while (existingTitles.includes(title)) {
+        title = `${baseTitle} ${counter++}`;
+      }
+    
+      const newNote = { ...noteForm, title };
+    
       if (selectedNoteIndex !== null) {
         const updatedNotes = [...notes];
         updatedNotes[selectedNoteIndex] = newNote;
@@ -54,9 +73,11 @@ export default function NotesPage() {
       } else {
         setNotes([...notes, newNote]);
       }
-  
+    
       resetForm();
     };
+    
+    
   
     const handleFileChange = (e) => {
       const newFiles = Array.from(e.target.files);
@@ -88,7 +109,9 @@ export default function NotesPage() {
     const handleEditNote = (index) => {
       setNoteForm(notes[index]);
       setSelectedNoteIndex(index);
+      setShowEditor(true);
     };
+    
   
     const handleDeleteNote = (index) => {
       const updatedNotes = [...notes];
@@ -98,7 +121,10 @@ export default function NotesPage() {
     };
   
     const handleTagKeyDown = (e) => {
-      const value = e.target.value.trim();
+     
+
+      const value = tagInput.trim();
+
       if (e.key === "Enter" && value) {
         e.preventDefault();
         if (!noteForm.tags.includes(value)) {
@@ -107,8 +133,11 @@ export default function NotesPage() {
             tags: [...prev.tags, value],
           }));
         }
+        setTagInput(""); // Clear the input
+
         e.target.value = ""; // Clear the input
       }
+     
     };
   
     const filteredNotes = notes.filter((note) =>
@@ -199,7 +228,9 @@ export default function NotesPage() {
             </div>
           </div>
   
+        
           {/* Editor Panel */}
+          {showEditor && (
           <div className="flex-1 p-6 space-y-6 overflow-y-auto bg-white bg-opacity-10 backdrop-blur-lg rounded-l-3xl shadow-inner">
             <input
               type="text"
@@ -210,6 +241,7 @@ export default function NotesPage() {
                 setNoteForm((prev) => ({ ...prev, title: e.target.value }))
               }
             />
+            
   
             <textarea
               placeholder="Write your note here..."
@@ -237,7 +269,10 @@ export default function NotesPage() {
                 type="text"
                 placeholder="Add Tags (press Enter)"
                 className="w-full p-3 mt-2 rounded-lg bg-white bg-opacity-20 text-black placeholder-black/60 focus:outline-none"
-                onKeyDown={handleTagKeyDown}
+                value={tagInput}
+                 onChange={(e) => setTagInput(e.target.value)}
+                  onKeyDown={handleTagKeyDown}
+
               />
             </div>
   
@@ -299,20 +334,25 @@ export default function NotesPage() {
   
             {/* Action Buttons */}
             <div className="flex justify-end gap-4 pt-2">
-              <button
-                onClick={resetForm}
-                className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-200"
-              >
-                Cancel
-              </button>
+            <button
+               onClick={() => {
+                 resetForm();
+                 setShowEditor(false);
+                  }}
+                      className="px-4 py-2 bg-white text-black rounded-lg hover:bg-gray-200"
+                      >
+                        Cancel
+                      </button>
+
               <button
                 onClick={handleSaveNote}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
               >
                 Save
               </button>
-            </div>
-          </div>
+             </div>
+           </div>
+          )}
         </div>
       </div>
       </div>
