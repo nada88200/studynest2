@@ -110,6 +110,11 @@ export default function CoursesPage() {
     (course) => course.author === session?.user?.name
   );
 
+
+  const handleCardClick = () => {
+    router.push("/individualcourse");
+  };
+
   return (
     <div>
       <Nav />
@@ -314,9 +319,11 @@ export default function CoursesPage() {
 
 
 const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe }) => {
+    const router = useRouter();
     return (
       <Tilt>
-        <div className="bg-white rounded-lg overflow-hidden cursor-pointer shadow-lg relative">
+        <div className="bg-white rounded-lg overflow-hidden cursor-pointer shadow-lg relative"
+        onClick={() => router.push("/individualarticle")}>
           {/* Admin Delete Button */}
           {currentUserRole === "admin" && (
             <button

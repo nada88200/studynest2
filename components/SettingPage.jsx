@@ -117,6 +117,7 @@ export default function SettingsPage() {
   
       // Update profile image with permanent URL
       setProfileImage(data.photo);
+      console.log("Image uploaded successfully:", data.photo);
   
     } catch (error) {
       console.error("Upload error:", error);
