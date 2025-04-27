@@ -1,11 +1,13 @@
+//components\SettingPage.jsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Nav } from "@/Home/Navbar/Nav";
+import { signIn } from "next-auth/react"; // Import this to force session refresh
 
 export default function SettingsPage() {
-  const { data: session, status } = useSession();
+  const { data: session, update, status } = useSession();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -21,15 +23,40 @@ export default function SettingsPage() {
   });
 
   const [profileImage, setProfileImage] = useState("/images/default-profile.jpeg");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [updateError, setUpdateError] = useState(null);
+  const [updateSuccess, setUpdateSuccess] = useState(false);
 
+  // useEffect(() => {
+  //   if (session) {
+  //     setFormData((prev) => ({
+  //       ...prev,
+  //       name: session.user?.name || "",
+  //       email: session.user?.email || "",
+  //     }));
+      
+  //     if (session.user?.photo) {
+  //       const photoPath = session.user.photo.startsWith('/') 
+  //         ? session.user.photo 
+  //         : `/images/${session.user.photo}`;
+  //       setProfileImage(photoPath);
+  //     }
+  //   }
+  // }, [session]);
   useEffect(() => {
     if (session) {
-      setFormData((prev) => ({
+      setFormData(prev => ({
         ...prev,
         name: session.user?.name || "",
         email: session.user?.email || "",
       }));
-      setProfileImage(session.user?.profileImage || "/images/default-profile.jpeg");
+      
+      if (session.user?.photo) {
+        const photoPath = session.user.photo.startsWith('/') 
+          ? session.user.photo 
+          : `/images/${session.user.photo}`;
+        setProfileImage(photoPath);
+      }
     }
   }, [session]);
 
@@ -57,29 +84,134 @@ export default function SettingsPage() {
     });
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
+    if (!file) return;
+  
+    try {
+      // Show temporary preview
       const imageUrl = URL.createObjectURL(file);
       setProfileImage(imageUrl);
+  
+      const formData = new FormData();
+      formData.append("file", file);
+  
+      const response = await fetch('/api/upload-profile-image', {
+        method: 'POST',
+        body: formData,
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to upload image");
+      }
+  
+      // Update session with new photo
+      await update({
+        user: {
+          ...session.user,
+          photo: data.photo
+        }
+      });
+  
+      // Update profile image with permanent URL
+      setProfileImage(data.photo);
+  
+    } catch (error) {
+      console.error("Upload error:", error);
+      // Revert to previous image
+      setProfileImage(session?.user?.photo || "/images/default-profile.jpeg");
+      setUpdateError(error.message);
+      setTimeout(() => setUpdateError(null), 3000);
     }
   };
 
-  const handleSave = () => {
-    console.log("Saving user data:", formData);
+  // const handleSave = () => {
+  //   console.log("Saving user data:", formData);
   
-    // Apply theme
-    if (formData.theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
+  //   // Apply theme
+  //   if (formData.theme === "dark") {
+  //     document.documentElement.classList.add("dark");
+  //   } else {
+  //     document.documentElement.classList.remove("dark");
+  //   }
+  
+  //   // Store in localStorage
+  //   localStorage.setItem("theme", formData.theme);
+  
+  //  // router.push("/dashboard");
+  // };
+  
+  const handleSave = async () => {
+    setIsUpdating(true);
+    setUpdateError(null);
+    setUpdateSuccess(false);
+  
+    try {
+      if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
+        throw new Error("New passwords don't match");
+      }
+  
+      const response = await fetch('/api/update-profile', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword,
+        }),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) throw new Error(data?.error || "Failed to update profile");
+  
+      // Update session immediately after profile update
+      await update({
+        user: {
+          ...session.user,
+          name: formData.name,
+          email: formData.email,
+          photo: profileImage.includes('blob:') ? session.user.photo : profileImage,
+        }
+      });
+  
+      // Force session refresh to make sure the latest session data is used
+      await signIn('credentials', {
+        redirect: false,
+      });
+  
+      // Reset password fields
+      setFormData(prev => ({
+        ...prev,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      }));
+  
+      // Apply theme changes
+      if (formData.theme === "dark") {
+        document.documentElement.classList.add("dark");
+      } else {
+        document.documentElement.classList.remove("dark");
+      }
+  
+      localStorage.setItem("theme", formData.theme);
+  
+      setUpdateSuccess(true);
+      setTimeout(() => setUpdateSuccess(false), 3000);
+  
+    } catch (error) {
+      console.error("Update error:", error);
+      setUpdateError(error.message);
+      setTimeout(() => setUpdateError(null), 3000);
+    } finally {
+      setIsUpdating(false);
     }
-  
-    // Store in localStorage
-    localStorage.setItem("theme", formData.theme);
-  
-   // router.push("/dashboard");
   };
+  
   
   if (status === "loading") return <div>Loading...</div>;
 
@@ -229,16 +361,33 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="mt-8 flex justify-center gap-6">
+          {/* <div className="mt-8 flex justify-center gap-6">
             <button
               onClick={handleSave}
               className="bg-green-800 hover:bg-green-900 text-white font-bold px-8 py-4 rounded-md"
             >
               Save Changes
             </button>
-          </div>
+          </div> */}
+{updateError && (
+  <div className="text-red-500 mb-4 text-center">{updateError}</div>
+)}
+{updateSuccess && (
+  <div className="text-green-500 mb-4 text-center">
+    Profile updated successfully!
+  </div>
+)}
 
-          <div className="mt-8 flex flex-col items-center gap-4">
+<button
+  onClick={handleSave}
+  disabled={isUpdating}
+  className={`bg-green-800 hover:bg-green-900 text-white font-bold px-8 py-4 rounded-md justify-center ${
+    isUpdating ? "opacity-50 cursor-not-allowed" : ""
+  }`}
+>
+  {isUpdating ? "Saving..." : "Save Changes"}
+</button>
+          <div className="mt-8 flex flex-col items-center gap-4 ">
             <p className="text-gray-900 dark:text-white text-lg text-center">
               If you are interested in our company and want to become a teacher, click the button below to apply.
             </p>

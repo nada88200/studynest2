@@ -1,3 +1,4 @@
+//models\user.js
 import { models, Schema } from "mongoose";
 import mongoose from "mongoose";
 //import { unique } from "next/dist/build/utils";
@@ -31,9 +32,26 @@ const userSchema = new Schema(
       enum: ["admin", "tutor", "user"],
       default: "user",
     },
+    photo: {
+      type: String,
+      default: "default-profile.jpeg"  // Add this new field
+    },
+    // archive: [{
+    //   type: Schema.Types.ObjectId,
+    //   ref: "Archive",
+    //   default: []
+    // }]
+    archive: [{
+      type: Schema.Types.ObjectId,
+      ref: "Archive",
+      default: []
+    }]
   },
-  { timestamps: true }
+  {  timestamps: true,
+    strictPopulate: false // Add this to prevent strict population errors
+     }
 );
+userSchema.set('strictPopulate', false);
 
 const User = models.User || mongoose.model("User", userSchema);
 
