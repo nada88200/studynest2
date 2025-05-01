@@ -320,10 +320,12 @@ export default function CoursesPage() {
 
 const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe }) => {
     const router = useRouter();
+
     return (
       <Tilt>
         <div className="bg-white rounded-lg overflow-hidden cursor-pointer shadow-lg relative"
-        onClick={() => router.push("/individualarticle")}>
+        //  onClick={() => router.push("/individualarticle")}
+        >
           {/* Admin Delete Button */}
           {currentUserRole === "admin" && (
             <button

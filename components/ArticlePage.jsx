@@ -23,9 +23,26 @@ export default function ArticlePage() {
   const router = useRouter();
 
   useEffect(() => {
-    setArticles(articleData);
+    const fetchArticles = async () => {
+      try {
+        const res = await fetch("/api/article");
+        const text = await res.text();
+  
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
+  
+        const data = JSON.parse(text); // Safe parsing
+        setArticles(data);
+      } catch (error) {
+        console.error("Failed to load articles:", error);
+      }
+    };
+  
+    fetchArticles();
   }, []);
-
+  
+  
   const filteredArticles = articles
     .filter((article) =>
       article.title.toLowerCase().includes(searchTerm.toLowerCase())
@@ -44,28 +61,49 @@ export default function ArticlePage() {
     setNewArticle((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleAddArticle = (e) => {
+  const handleAddArticle = async (e) => {
     e.preventDefault();
-    const newId = articles.length + 1;
     const article = {
       ...newArticle,
-      id: newId,
       username: session?.user?.name || newArticle.author,
     };
-    setArticles((prev) => [...prev, article]);
-    setNewArticle({
-      title: "",
-      category: "",
-      content: "",
-      author: "",
-      coverImage: "",
-    });
+  
+    try {
+      const res = await fetch("/api/article", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(article),
+      });
+  
+      const text = await res.text();
+  
+      if (!res.ok) {
+        throw new Error(`HTTP error! status: ${res.status} - ${text}`);
+      }
+  
+      const newSavedArticle = JSON.parse(text); // Safer
+      setArticles((prev) => [...prev, newSavedArticle]);
+  
+      setNewArticle({
+        title: "",
+        category: "",
+        content: "",
+        author: "",
+        coverImage: "",
+      });
+    } catch (err) {
+      console.error("Failed to add article:", err);
+    }
   };
+  
+  
 
   const currentUserRole = session?.user?.role || "user";
-  const handleDeleteArticle = (id) => {
-    setArticles((prev) => prev.filter((article) => article.id !== id));
+  const handleDeleteArticle = async (id) => {
+    await fetch(`/api/article/${id}`, { method: "DELETE" });
+    setArticles((prev) => prev.filter((article) => article._id !== id));
   };
+  
 
   return (
     <div>
@@ -128,15 +166,36 @@ export default function ArticlePage() {
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) =>
-                    setNewArticle((prev) => ({
-                      ...prev,
-                      coverImage: URL.createObjectURL(e.target.files[0]),
-                    }))
-                  }
-                  className="p-3 bg-white/20 rounded-lg text-white"
-                  required
+                     onChange={async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    const formData = new FormData();
+                    formData.append("file", file);
+                    formData.append("upload_preset", process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET);
+
+                    try {
+                    const res = await fetch(
+                    `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/upload`,
+                    {
+                    method: "POST",
+                    body: formData,
+                    }
+                );
+
+                const data = await res.json();
+                setNewArticle((prev) => ({
+                    ...prev,
+                    coverImage: data.secure_url,
+                }));
+                } catch (err) {
+                console.error("Image upload failed:", err);
+                }
+                }}
+                className="p-3 bg-white/20 rounded-lg text-white"
+                required
                 />
+
                 {newArticle.coverImage && (
                   <div className="mt-4 p-2 border-2 border-white/40 rounded-lg">
                     <img
@@ -192,7 +251,7 @@ export default function ArticlePage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-10">
             {filteredArticles.map((article) => (
               <ArticleCard
-                key={article.id}
+                key={article._id}
                 article={article}
                 currentUserRole={currentUserRole}
                 onDelete={() => handleDeleteArticle(article.id)}

@@ -6,7 +6,9 @@ export const HeroContent = () => {
     return (
         <div>
             {/* title */}
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white">Welcome {session?.user?.name}.</h1>           
+            <h1 className="text-4xl font-bold mb-4 text-white">
+              Hello {session?.user?.name || "User"} 👋
+            </h1>           
              <br />
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold md:leading-[3rem] lg:leading-[3.5rem] xl:leading-[4rem] text-white">Best online platform for education.</h1>
             {/* description */}

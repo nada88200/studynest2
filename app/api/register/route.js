@@ -1,9 +1,14 @@
-import { connectMongoDB } from "@/lib/mongodb";
+import  connectMongoDB  from "@/lib/mongodb";
 import { NextResponse } from "next/server";
 import User from "@/models/user";
 import bcrypt from "bcryptjs";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]/route"; 
+
+
 
 export async function POST(req) {
+  const session = await getServerSession(authOptions);
   try {
     const { name, email, password } = await req.json();
 
@@ -41,3 +46,4 @@ export async function POST(req) {
     return NextResponse.json({ message: "An error occurred" }, { status: 500 });
   }
 }
+
