@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { writeFile } from "fs/promises";
-import path from "path";
 import connectMongoDB from "@/lib/mongodb";
 import Archive from "@/models/Archive";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import cloudinary from "@/lib/cloudinary";
 
 export async function POST(req) {
   await connectMongoDB();
@@ -23,18 +22,25 @@ export async function POST(req) {
   for (const file of files) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
-    const fileName = `${Date.now()}-${file.name}`;
 
-    const filePath = path.join(process.cwd(), "public/uploads", fileName);
-    await writeFile(filePath, buffer);
+    // Convert buffer to a base64-encoded data URI
+    const base64 = buffer.toString("base64");
+    const dataUri = `data:${file.type};base64,${base64}`;
 
+    // Upload to Cloudinary
+    const uploadResult = await cloudinary.uploader.upload(dataUri, {
+      folder: "archive", // optional: creates folder in Cloudinary
+      resource_type: "auto",
+    });
+
+    // Save metadata to MongoDB
     const fileRecord = await Archive.create({
       name: file.name,
       type: file.type,
       size: file.size,
       tag,
       owner: session.user.id,
-      preview: `/uploads/${fileName}`, // this will be accessible
+      preview: uploadResult.secure_url,
     });
 
     uploadedFiles.push(fileRecord);

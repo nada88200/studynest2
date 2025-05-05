@@ -34,7 +34,7 @@ const userSchema = new Schema(
     },
     photo: {
       type: String,
-      default: "default-profile.jpeg"  // Add this new field
+      default: process.env.NEXT_PUBLIC_DEFAULT_PROFILE_PHOTO  // Add this new field
     },
     // archive: [{
     //   type: Schema.Types.ObjectId,
@@ -46,6 +46,7 @@ const userSchema = new Schema(
       ref: "Archive",
       default: []
     }]
+    
   },
   {  timestamps: true,
     strictPopulate: false // Add this to prevent strict population errors

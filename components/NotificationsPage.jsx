@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useState } from "react";
+import { useEffect,useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Bell } from "lucide-react";
 import { Nav } from "@/Home/Navbar/Nav";
@@ -10,33 +10,8 @@ import React from "react";
 export default function NotificationsPage() {
   const { data: session } = useSession();
 
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      sender: "Dexter",
-      message: "You have upcoming activities due next week",
-      read: false,
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-      details: "Don't forget to complete your homework and submit by next Friday.",
-    },
-    {
-      id: 2,
-      sender: "Alice",
-      message: "Accepted your request",
-      read: false,
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-      details: "Alice has accepted your course request and will be available for a meeting.",
-    },
-    {
-      id: 3,
-      sender: "Charlie",
-      message: "Weekly report is ready",
-      read: true,
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-      details: "You can now view the weekly performance report in your dashboard.",
-    },
-  ]);
-
+    const [notifications, setNotifications] = useState([]);
+    const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedNotification, setSelectedNotification] = useState(null); // New state for selected notification
@@ -51,9 +26,9 @@ export default function NotificationsPage() {
   const filteredNotifications = notifications.filter((n) => {
     const matchesFilter =
       filter === "all" ? true : filter === "read" ? n.read : !n.read;
-    const matchesSearch =
-      n.sender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      n.message.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch =
+      (typeof n.sender === "string" && n.sender.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (typeof n.message === "string" && n.message.toLowerCase().includes(searchTerm.toLowerCase()));    
     return matchesFilter && matchesSearch;
   });
 
@@ -71,6 +46,22 @@ export default function NotificationsPage() {
     setSelectedNotification(notification); // Set the clicked notification
   };
 
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      try {
+        const res = await fetch("/api/notifications");
+        const data = await res.json();
+        console.log("Fetched notifications:", data);
+        setNotifications(data);
+      } catch (error) {
+        console.error("Error fetching notifications:", error);
+      }
+    };
+
+    fetchNotifications();
+  }, []);
+  
   return (
     <div>
       <Nav />
@@ -154,11 +145,16 @@ export default function NotificationsPage() {
                             : "text-yellow-300 font-semibold"
                         }`}
                       >
-                        <span className="font-bold">{notif.sender}</span>: {notif.message}
+                       <span className="font-bold">{notif.sender}</span>: {notif.message}
                       </p>
+                      {selectedNotification && selectedNotification.createdAt && (
                       <span className="text-xs text-white/50">
-                        {formatDistanceToNow(notif.timestamp, { addSuffix: true })}
-                      </span>
+                      {formatDistanceToNow(new Date(selectedNotification.createdAt), {
+                      addSuffix: true,
+                    })}
+                   </span>
+                      )}
+
                     </div>
                     <div className="flex flex-col space-y-1 ml-4 text-xs">
                       <button
@@ -205,11 +201,14 @@ export default function NotificationsPage() {
                 <h2 className="text-xl font-semibold">{selectedNotification.sender}</h2>
                 <p className="mt-4 text-lg">{selectedNotification.message}</p>
                 <p className="mt-2 text-sm text-white/60">{selectedNotification.details}</p>
-                <p className="mt-2 text-xs text-white/50">
-                  {formatDistanceToNow(selectedNotification.timestamp, {
-                    addSuffix: true,
-                  })}
-                </p>
+                {selectedNotification?.timestamp && !isNaN(new Date(selectedNotification.timestamp)) && (
+  <p className="mt-2 text-xs text-white/50">
+    {formatDistanceToNow(new Date(selectedNotification.timestamp), {
+      addSuffix: true,
+    })}
+  </p>
+)}
+
                 <button
                   onClick={() =>
                     setNotifications((prev) =>
@@ -266,3 +265,5 @@ export default function NotificationsPage() {
     </div>
   );
 }
+
+

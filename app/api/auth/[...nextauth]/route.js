@@ -64,12 +64,12 @@
 
 // export {handler as GET ,handler as POST};
 
-
+//app\api\auth\[...nextauth]\route.js
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import User from "@/models/user";
-import connectMongoDB from "@/lib/mongodb"; // <-- remove {}
+import connectMongoDB from "@/lib/mongodb";
 
 export const authOptions = {
   providers: [
@@ -110,21 +110,30 @@ export const authOptions = {
   ],
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 0, // Important: Always get fresh session data
   },
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: "/",
   },
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
+      // Initial sign in
       if (user) {
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
-        token.role = user.role;
         token.photo = user.photo;
+        token.role = user.role;
         token.archives = user.archives;
       }
+      
+      // Handle session updates from client
+      if (trigger === "update" && session?.user) {
+        token = { ...token, ...session.user };
+      }
+      
       return token;
     },
     async session({ session, token }) {
@@ -132,8 +141,8 @@ export const authOptions = {
         session.user.id = token.id;
         session.user.name = token.name;
         session.user.email = token.email;
-        session.user.role = token.role;
         session.user.photo = token.photo;
+        session.user.role = token.role;
         session.user.archives = token.archives;
       }
       return session;

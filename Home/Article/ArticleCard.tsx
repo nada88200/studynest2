@@ -52,7 +52,9 @@ export const ArticleCard = ({article} :Props) => {
                 {/* heading */}
                 <h1 className="mt-4 mb-4 text-xl font-semibold"></h1>
                 <p className="text-base text-gray-700"> {article.content}</p>
-                <button onClick={() => router.push("/individualarticle")} className="mt-4 mb-3 hover:text-green-600 text-lg text-black font-bold underline">Learn More</button>
+                {/* <button onClick={() => router.push("/individualarticle")} className="mt-4 mb-3 hover:text-green-600 text-lg text-black font-bold underline">Learn More</button> */}
+                <button  className="mt-4 mb-3 hover:text-green-600 text-lg text-black font-bold underline">Learn More</button>
+
             </div>
         </div>
         </Tilt>

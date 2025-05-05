@@ -1,16 +1,13 @@
+//components\SettingPage.jsx
 "use client";
 import React, { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { Nav } from "@/Home/Navbar/Nav";
-import {
-  FaSignOutAlt,
-  FaTrash,
-  FaChalkboardTeacher,
-} from "react-icons/fa";
+import { FaSignOutAlt, FaTrash, FaChalkboardTeacher } from "react-icons/fa";
 
 export default function SettingsPage() {
-  const { data: session, update, status } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const router = useRouter();
 
   const [formData, setFormData] = useState({
@@ -25,91 +22,95 @@ export default function SettingsPage() {
     theme: "normal",
   });
 
-  const [profileImage, setProfileImage] = useState("/images/default-profile.jpeg");
+  const [profileImage, setProfileImage] = useState(process.env.NEXT_PUBLIC_DEFAULT_PROFILE_PHOTO);
   const [isUpdating, setIsUpdating] = useState(false);
   const [updateError, setUpdateError] = useState(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
 
   useEffect(() => {
-    if (session) {
+    if (session?.user) {
       setFormData(prev => ({
         ...prev,
-        name: session.user?.name || "",
-        email: session.user?.email || "",
+        name: session.user.name || "",
+        email: session.user.email || "",
       }));
-
-      if (session.user?.photo) {
-        setProfileImage(session.user.photo); // use whatever photo URL is stored in session
-      }           
+      setProfileImage(session.user.photo || process.env.NEXT_PUBLIC_DEFAULT_PROFILE_PHOTO);
     }
   }, [session]);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
-      setFormData((prev) => ({
-        ...prev,
-        theme: savedTheme,
-      }));
-
-      if (savedTheme === "dark") {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      setFormData(prev => ({ ...prev, theme: savedTheme }));
+      document.documentElement.classList.toggle("dark", savedTheme === "dark");
     }
   }, []);
 
   const handleChange = (e) => {
     const { name, type, checked, value } = e.target;
-    setFormData({
-      ...formData,
+    setFormData(prev => ({
+      ...prev,
       [name]: type === "checkbox" ? checked : value,
-    });
+    }));
   };
 
   const handleImageChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const previousImage = profileImage;
     try {
-      const imageUrl = URL.createObjectURL(file);
-      setProfileImage(imageUrl);
+      const tempUrl = URL.createObjectURL(file);
+      setProfileImage(tempUrl);
 
-      const uploadForm = new FormData();
-      uploadForm.append("file", file);
+      const formData = new FormData();
+      formData.append("file", file);
 
       const response = await fetch("/api/upload-profile-image", {
         method: "POST",
-        body: uploadForm,
+        body: formData,
       });
 
-      const data = await response.json();
-      if (!response.ok) throw new Error(data?.error || "Failed to upload image");
+      if (!response.ok) throw new Error("Failed to upload image");
 
-      await update({
+      const { photo } = await response.json();
+
+      // Update session with new photo
+      await updateSession({
+        ...session,
         user: {
           ...session.user,
-          photo: data.photo,  // update photo in session
+          photo,
         },
       });
 
-      setProfileImage(data.photo);  // update the image in the UI
+      setProfileImage(photo);
+
+      if (previousImage.startsWith('blob:')) {
+        URL.revokeObjectURL(previousImage);
+      }
 
     } catch (error) {
-      setProfileImage(session?.user?.photo || "/images/default-profile.jpeg");
+      console.error("Upload error:", error);
+      setProfileImage(session?.user?.photo || process.env.NEXT_PUBLIC_DEFAULT_PROFILE_PHOTO);
       setUpdateError(error.message);
       setTimeout(() => setUpdateError(null), 3000);
     }
   };
 
   const handleSave = async () => {
+    if (!formData.name || !formData.email) {
+      setUpdateError("Name and email are required");
+      setTimeout(() => setUpdateError(null), 3000);
+      return;
+    }
+
     setIsUpdating(true);
     setUpdateError(null);
     setUpdateSuccess(false);
 
     try {
-      if (formData.newPassword !== formData.confirmPassword) {
+      if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
         throw new Error("New passwords don't match");
       }
 
@@ -127,15 +128,18 @@ export default function SettingsPage() {
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || "Failed to update profile");
 
-      await update({
+      // Force a complete session refresh
+      await updateSession({
+        ...session,
         user: {
           ...session.user,
           name: formData.name,
           email: formData.email,
-          photo: profileImage.includes("blob:") ? session.user.photo : profileImage,
+          photo: profileImage.startsWith('blob:') ? session.user.photo : profileImage,
         },
       });
 
+      // Clear password fields
       setFormData(prev => ({
         ...prev,
         currentPassword: "",
@@ -143,6 +147,7 @@ export default function SettingsPage() {
         confirmPassword: "",
       }));
 
+      // Handle theme changes
       if (formData.theme === "dark") {
         document.documentElement.classList.add("dark");
       } else {
@@ -152,7 +157,12 @@ export default function SettingsPage() {
 
       setUpdateSuccess(true);
       setTimeout(() => setUpdateSuccess(false), 3000);
+
+      // Force a complete session refresh from the server
+      await fetch("/api/auth/session?update");
+
     } catch (error) {
+      console.error("Update error:", error);
       setUpdateError(error.message);
       setTimeout(() => setUpdateError(null), 3000);
     } finally {
@@ -160,9 +170,8 @@ export default function SettingsPage() {
     }
   };
 
+  // ... rest of your JSX remains exactly the same ...
 
-  console.log("Session data:", session);
-  if (status === "loading") return <div>Loading...</div>;
   return (
     <div>
       <Nav />
