@@ -46,6 +46,33 @@ export default function SettingsPage() {
     }
   }, []);
 
+
+  const handleDeleteAccount = async () => {
+    if (window.confirm("Are you sure you want to delete your account? This action cannot be undone.")) {
+      try {
+        const response = await fetch("/api/delete-account", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        const data = await response.json();
+        if (response.ok) {
+          alert("Your account has been deleted successfully.");
+          signOut();
+        } else {
+          throw new Error(data?.error || "Failed to delete account");
+        }
+      } catch (error) {
+        console.error("Delete account error:", error);
+        alert("Failed to delete account: " + error.message);
+      }
+    }
+  };
+
+
+
   const handleChange = (e) => {
     const { name, type, checked, value } = e.target;
     setFormData(prev => ({
@@ -281,42 +308,19 @@ export default function SettingsPage() {
                 </div>
               </section>
 
-              {/* Privacy */}
-              <section className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                  Privacy Settings
-                </h2>
-                <div className="space-y-3 text-gray-900 dark:text-white">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      name="notifications"
-                      checked={formData.notifications}
-                      onChange={handleChange}
-                    />
-                    Enable Notifications
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      name="showPersonalInfo"
-                      checked={formData.showPersonalInfo}
-                      onChange={handleChange}
-                    />
-                    Show Personal Info
-                  </label>
-                </div>
-              </section>
-
               {/* Actions */}
               <section className="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow space-y-4">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
                   Account Controls
                 </h2>
                 <div className="flex flex-col md:flex-row gap-4">
-                  <button className="w-full border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2">
-                  <FaTrash /> Delete Account
-                  </button>
+                <button
+                  onClick={handleDeleteAccount}
+                  className="w-full border border-red-500 text-red-500 hover:bg-red-500 hover:text-white transition py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2"
+                >
+                  <FaTrash className="inline mr-2" /> Delete Account
+                </button>
+                
                   <button
                     onClick={() => signOut()}
                     className="w-full bg-gray-700 hover:bg-gray-600 transition text-white py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2"
@@ -328,8 +332,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Save Button and Status */}
-          {/* Save Button and Status */}
+          {/* Save Changes Button */}
 <div className="mt-10 flex flex-col items-center space-y-4">
   {updateError && <p className="text-red-500 mb-2">{updateError}</p>}
   {updateSuccess && <p className="text-green-500 mb-2">Profile updated successfully!</p>}
@@ -346,17 +349,19 @@ export default function SettingsPage() {
   >
     {isUpdating ? "Saving..." : "Save Changes"}
   </button>
-
-  <p className="text-white mt-6 text-lg text-center max-w-xl">
-    Interested in sharing your knowledge? Apply to become a teacher and inspire others.
-  </p>
-
-  <button
-    onClick={() => router.push("/RequestTeacher")}
-    className="w-fit text-sm border border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black transition py-2 px-6 rounded-full font-medium flex items-center justify-center gap-2"
-  >
-    <FaChalkboardTeacher /> Become a Teacher
-  </button>
+  {session?.user?.role === "user" && (
+  <>
+    <p className="text-white mt-6 text-lg text-center max-w-xl">
+      Interested in sharing your knowledge? Apply to become a teacher and inspire others.
+    </p>
+    <button
+      onClick={() => router.push("/RequestTeacher")}
+      className="w-fit text-sm border border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black transition py-2 px-6 rounded-full font-medium flex items-center justify-center gap-2"
+    >
+      <FaChalkboardTeacher /> Become a Teacher
+    </button>
+  </>
+)}
 </div>
 
         </main>

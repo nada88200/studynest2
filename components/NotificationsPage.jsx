@@ -1,7 +1,7 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { useEffect,useState } from "react";
+import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { Bell } from "lucide-react";
 import { Nav } from "@/Home/Navbar/Nav";
@@ -9,50 +9,84 @@ import React from "react";
 
 export default function NotificationsPage() {
   const { data: session } = useSession();
-
-    const [notifications, setNotifications] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedNotification, setSelectedNotification] = useState(null); // New state for selected notification
+  const [selectedNotification, setSelectedNotification] = useState(null);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const markAllAsRead = () => {
-    const updated = notifications.map((n) => ({ ...n, read: true }));
-    setNotifications(updated);
+  const markAllAsRead = async () => {
+    try {
+      const updated = await Promise.all(
+        notifications.map(async (n) => {
+          if (!n.read) {
+            await fetch(`/api/notifications/${n._id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ read: true }), // or false
+              headers: { "Content-Type": "application/json" },
+            });            
+          }
+          return { ...n, read: true };
+        })
+      );
+      setNotifications(updated);
+    } catch (error) {
+      console.error("Failed to mark all as read:", error);
+    }
   };
 
   const filteredNotifications = notifications.filter((n) => {
     const matchesFilter =
       filter === "all" ? true : filter === "read" ? n.read : !n.read;
-      const matchesSearch =
-      (typeof n.sender === "string" && n.sender.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (typeof n.message === "string" && n.message.toLowerCase().includes(searchTerm.toLowerCase()));    
+    const matchesSearch =
+      (typeof n.sender === "string" &&
+        n.sender.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (typeof n.message === "string" &&
+        n.message.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesFilter && matchesSearch;
   });
 
-  const mostFrequentSender =
-    notifications.length > 0
-      ? Object.entries(
-          notifications.reduce((acc, curr) => {
-            acc[curr.sender] = (acc[curr.sender] || 0) + 1;
-            return acc;
-          }, {})
-        ).sort((a, b) => b[1] - a[1])[0][0]
-      : "N/A";
 
   const handleNotificationClick = (notification) => {
-    setSelectedNotification(notification); // Set the clicked notification
+    setSelectedNotification(notification);
   };
 
+  const toggleReadStatus = async (notif) => {
+    try {
+      const updatedRead = !notif.read;
+      await fetch(`/api/notifications/${notif._id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ read: updatedRead }),
+      });
+      setNotifications((prev) =>
+        prev.map((n) =>
+          n._id === notif._id ? { ...n, read: updatedRead } : n
+        )
+      );      
+    } catch (error) {
+      console.error("Failed to toggle read status:", error);
+    }
+  };
+
+  const deleteNotification = async (notif) => {
+    try {
+      await fetch(`/api/notifications/${notif._id}`, {
+        method: "DELETE",
+      });
+      setNotifications((prev) => prev.filter((n) => n._id !== notif._id));
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+    }
+  };
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
         const res = await fetch("/api/notifications");
         const data = await res.json();
-        console.log("Fetched notifications:", data);
         setNotifications(data);
       } catch (error) {
         console.error("Error fetching notifications:", error);
@@ -61,7 +95,9 @@ export default function NotificationsPage() {
 
     fetchNotifications();
   }, []);
+
   
+
   return (
     <div>
       <Nav />
@@ -89,36 +125,19 @@ export default function NotificationsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
               <div className="flex justify-between gap-2">
-                <button
-                  onClick={() => setFilter("all")}
-                  className={`text-sm px-2 py-1 rounded ${
-                    filter === "all"
-                      ? "bg-yellow-400 text-black"
-                      : "text-white hover:text-yellow-400"
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilter("unread")}
-                  className={`text-sm px-2 py-1 rounded ${
-                    filter === "unread"
-                      ? "bg-yellow-400 text-black"
-                      : "text-white hover:text-yellow-400"
-                  }`}
-                >
-                  Unread
-                </button>
-                <button
-                  onClick={() => setFilter("read")}
-                  className={`text-sm px-2 py-1 rounded ${
-                    filter === "read"
-                      ? "bg-yellow-400 text-black"
-                      : "text-white hover:text-yellow-400"
-                  }`}
-                >
-                  Read
-                </button>
+                {["all", "unread", "read"].map((key) => (
+                  <button
+                    key={key}
+                    onClick={() => setFilter(key)}
+                    className={`text-sm px-2 py-1 rounded ${
+                      filter === key
+                        ? "bg-yellow-400 text-black"
+                        : "text-white hover:text-yellow-400"
+                    }`}
+                  >
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                  </button>
+                ))}
               </div>
               <button
                 onClick={markAllAsRead}
@@ -130,7 +149,7 @@ export default function NotificationsPage() {
                 {filteredNotifications.map((notif) => (
                   <div
                     key={notif.id}
-                    onClick={() => handleNotificationClick(notif)} // Handle click
+                    onClick={() => handleNotificationClick(notif)}
                     className={`p-4 rounded-xl transition shadow-inner cursor-pointer flex justify-between items-start ${
                       notif.read
                         ? "bg-white/10 border border-white/20"
@@ -145,36 +164,69 @@ export default function NotificationsPage() {
                             : "text-yellow-300 font-semibold"
                         }`}
                       >
-                       <span className="font-bold">{notif.sender}</span>: {notif.message}
+                         {notif.message}
                       </p>
-                      {selectedNotification && selectedNotification.createdAt && (
-                      <span className="text-xs text-white/50">
-                      {formatDistanceToNow(new Date(selectedNotification.createdAt), {
-                      addSuffix: true,
-                    })}
-                   </span>
+
+                      {notif.type === "teacher_request" && (
+                        <div className="mt-2 flex gap-2">
+                          <button
+                            onClick={async () => {
+                              await fetch(`/api/teacher-request-response`, {
+                                method: "POST",
+                                body: JSON.stringify({
+                                  userId: notif.senderId,
+                                  accepted: true,
+                                }),
+                                headers: { "Content-Type": "application/json" },
+                              });
+                              deleteNotification(notif);
+                            }}
+                            className="bg-green-600 text-white text-xs px-2 py-1 rounded"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={async () => {
+                              await fetch(`/api/teacher-request-response`, {
+                                method: "POST",
+                                body: JSON.stringify({
+                                  userId: notif.senderId,
+                                  accepted: false,
+                                }),
+                                headers: { "Content-Type": "application/json" },
+                              });
+                              deleteNotification(notif);
+                            }}
+                            className="bg-red-600 text-white text-xs px-2 py-1 rounded"
+                          >
+                            Reject
+                          </button>
+                        </div>
                       )}
 
+                      {notif.createdAt && (
+                        <span className="text-xs text-white/50">
+                          {formatDistanceToNow(new Date(notif.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                      )}
                     </div>
                     <div className="flex flex-col space-y-1 ml-4 text-xs">
                       <button
-                        onClick={() =>
-                          setNotifications((prev) =>
-                            prev.map((n) =>
-                              n.id === notif.id ? { ...n, read: !n.read } : n
-                            )
-                          )
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleReadStatus(notif);
+                        }}
                         className="text-yellow-300 hover:text-yellow-400"
                       >
                         {notif.read ? "Mark Unread" : "Mark Read"}
                       </button>
                       <button
-                        onClick={() =>
-                          setNotifications((prev) =>
-                            prev.filter((n) => n.id !== notif.id)
-                          )
-                        }
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteNotification(notif);
+                        }}
                         className="text-red-400 hover:text-red-600"
                       >
                         Delete
@@ -186,7 +238,7 @@ export default function NotificationsPage() {
             </div>
           </div>
 
-          {/* Content Area */}
+          {/* Main Content */}
           <div className="flex-1 p-10">
             <h1 className="text-4xl font-bold mb-4 text-white">
               Hello {session?.user?.name || "User"} 👋
@@ -195,29 +247,21 @@ export default function NotificationsPage() {
               Here's a summary of your recent notifications.
             </p>
 
-            {/* Display selected notification details */}
             {selectedNotification ? (
               <div className="bg-white/10 border border-white/20 rounded-2xl p-6 text-white">
                 <h2 className="text-xl font-semibold">{selectedNotification.sender}</h2>
                 <p className="mt-4 text-lg">{selectedNotification.message}</p>
                 <p className="mt-2 text-sm text-white/60">{selectedNotification.details}</p>
                 {selectedNotification?.timestamp && !isNaN(new Date(selectedNotification.timestamp)) && (
-  <p className="mt-2 text-xs text-white/50">
-    {formatDistanceToNow(new Date(selectedNotification.timestamp), {
-      addSuffix: true,
-    })}
-  </p>
-)}
-
+                  <p className="mt-2 text-xs text-white/50">
+                    {formatDistanceToNow(new Date(selectedNotification.timestamp), {
+                      addSuffix: true,
+                    })}
+                  </p>
+                )}
                 <button
                   onClick={() =>
-                    setNotifications((prev) =>
-                      prev.map((n) =>
-                        n.id === selectedNotification.id
-                          ? { ...n, read: true }
-                          : n
-                      )
-                    )
+                    toggleReadStatus(selectedNotification)
                   }
                   className="mt-4 text-yellow-300 hover:text-yellow-400"
                 >
@@ -234,23 +278,10 @@ export default function NotificationsPage() {
               <div className="bg-white/10 border border-white/20 rounded-2xl p-6 text-white">
                 <h3 className="text-lg font-semibold">Total Notifications</h3>
                 <p className="text-3xl font-bold mt-2">{notifications.length}</p>
-                <p className="text-sm text-white/60 mt-1">From all senders</p>
               </div>
-
               <div className="bg-white/10 border border-white/20 rounded-2xl p-6 text-white">
                 <h3 className="text-lg font-semibold">Unread</h3>
-                <p className="text-3xl font-bold mt-2">
-                  {notifications.filter((n) => !n.read).length}
-                </p>
-                <p className="text-sm text-white/60 mt-1">
-                  You have unread messages
-                </p>
-              </div>
-
-              <div className="bg-white/10 border border-white/20 rounded-2xl p-6 text-white">
-                <h3 className="text-lg font-semibold">Most Frequent Sender</h3>
-                <p className="text-2xl font-bold mt-2">{mostFrequentSender}</p>
-                <p className="text-sm text-white/60 mt-1">Sent you the most updates</p>
+                <p className="text-3xl font-bold mt-2">{unreadCount}</p>
               </div>
             </div>
 
@@ -265,5 +296,3 @@ export default function NotificationsPage() {
     </div>
   );
 }
-
-

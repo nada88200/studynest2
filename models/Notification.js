@@ -7,7 +7,7 @@ const NotificationSchema = new mongoose.Schema({
   articleId: String,
   type: String,
   message: String,
-  isRead: { type: Boolean, default: false },
+  read: { type: Boolean, default: false },
   createdAt: { type: Date, default: Date.now },
 });
 

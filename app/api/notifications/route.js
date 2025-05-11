@@ -39,28 +39,35 @@ export async function POST(req) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
   }
 
-  const { recipientId: recipientEmail, senderId, type, articleId,message } = await req.json();
+  const { recipientId: recipientEmail, type, articleId } = await req.json();
 
-  // Fetch the recipient's user _id using their email
   const User = (await import('@/models/user')).default;
-  const recipientUser = await User.findOne({ email: recipientEmail });
+  const Article = (await import('@/models/Article')).default;
 
+  const recipientUser = await User.findOne({ email: recipientEmail });
   if (!recipientUser) {
     return new Response(JSON.stringify({ error: "Recipient not found" }), { status: 404 });
   }
-  const senderName = session.user.name;
+
+  const senderUser = await User.findById(session.user.id);
+  if (!senderUser) {
+    return new Response(JSON.stringify({ error: "Sender not found" }), { status: 404 });
+  }
+  const article = await Article.findById(articleId);
+  if (!article) {
+    return new Response(JSON.stringify({ error: "Article not found" }), { status: 404 });
+  }
+
 
   const newNotification = new Notification({
     recipientId: recipientUser._id,
-    senderId,
+    senderId: senderUser._id,
     type,
     articleId,
-    message,
+    message: `${senderUser.name} liked your article "${article.title}"`,
   });
 
   await newNotification.save();
 
   return new Response(JSON.stringify(newNotification), { status: 201 });
 }
-
-

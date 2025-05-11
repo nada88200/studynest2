@@ -38,6 +38,23 @@ export default function NotesPage() {
       files: [],
     });
     const [searchTerm, setSearchTerm] = useState("");
+
+    const { data: session } = useSession();
+
+    useEffect(() => {
+      const fetchNotes = async () => {
+        try {
+          const res = await fetch("/api/notes");
+          const data = await res.json();
+          setNotes(data);
+        } catch (error) {
+          console.error("Error fetching notes:", error);
+        }
+      };
+    
+      fetchNotes();
+    }, []);
+
   
     const resetForm = () => {
       setNoteForm({ title: "", content: "", todos: [], tags: [], files: [] });
@@ -46,7 +63,7 @@ export default function NotesPage() {
     };
     
   
-    const handleSaveNote = () => {
+    const handleSaveNote = async () => {
       if (!noteForm.tags.length || tagInput.trim()) {
         alert("Please add at least one tag and press Enter before saving.");
         return;
@@ -66,27 +83,44 @@ export default function NotesPage() {
     
       const newNote = { ...noteForm, title };
     
-      if (selectedNoteIndex !== null) {
-        const updatedNotes = [...notes];
-        updatedNotes[selectedNoteIndex] = newNote;
-        setNotes(updatedNotes);
-      } else {
-        setNotes([...notes, newNote]);
+      try {
+        let response;
+        if (selectedNoteIndex !== null) {
+          // UPDATE
+          const noteId = notes[selectedNoteIndex]._id;
+          response = await fetch(`/api/notes/${noteId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newNote),
+          });
+        } else {
+          // CREATE
+          response = await fetch("/api/notes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newNote),
+          });
+        }
+    
+        const savedNote = await response.json();
+    
+        if (selectedNoteIndex !== null) {
+          const updatedNotes = [...notes];
+          updatedNotes[selectedNoteIndex] = savedNote;
+          setNotes(updatedNotes);
+        } else {
+          setNotes([...notes, savedNote]);
+        }
+    
+        resetForm();
+      } catch (err) {
+        console.error("Failed to save note:", err);
       }
-    
-      resetForm();
     };
     
     
   
-    const handleFileChange = (e) => {
-      const newFiles = Array.from(e.target.files);
-      setNoteForm((prev) => ({
-        ...prev,
-        files: [...prev.files, ...newFiles],
-      }));
-    };
-  
+
     const handleAddTodo = () => {
       setNoteForm((prev) => ({
         ...prev,
@@ -113,12 +147,21 @@ export default function NotesPage() {
     };
     
   
-    const handleDeleteNote = (index) => {
-      const updatedNotes = [...notes];
-      updatedNotes.splice(index, 1);
-      setNotes(updatedNotes);
-      if (selectedNoteIndex === index) resetForm();
+    const handleDeleteNote = async (index) => {
+      const noteId = notes[index]._id;
+    
+      try {
+        await fetch(`/api/notes/${noteId}`, { method: "DELETE" });
+        const updatedNotes = [...notes];
+        updatedNotes.splice(index, 1);
+        setNotes(updatedNotes);
+    
+        if (selectedNoteIndex === index) resetForm();
+      } catch (err) {
+        console.error("Failed to delete note:", err);
+      }
     };
+    
   
     const handleTagKeyDown = (e) => {
      
@@ -305,30 +348,6 @@ export default function NotesPage() {
                 >
                   + Add Task
                 </button>
-              </div>
-            </div>
-  
-            {/* File Upload */}
-            <div className="space-y-2">
-              <p className="font-semibold">📎 Attach Files</p>
-              <input
-                type="file"
-                multiple
-                onChange={handleFileChange}
-                className="text-white"
-              />
-              <div className="max-h-40 overflow-y-auto grid gap-2">
-                {noteForm.files.map((file, idx) => (
-                  <a
-                    key={idx}
-                    href={URL.createObjectURL(file)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-200 hover:underline truncate"
-                  >
-                    {file.name}
-                  </a>
-                ))}
               </div>
             </div>
   

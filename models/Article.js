@@ -13,6 +13,8 @@ const ArticleSchema = new Schema({
     type: [String], // store user IDs who liked the article
     default: [],
   },
+
+  
   
 }, { timestamps: true });
 

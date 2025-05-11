@@ -1,81 +1,35 @@
-"use client";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation"; // import router
+'use client';
+import { useState } from "react";
 
-export default function RequestTeacherForm() {
-  const router = useRouter(); // initialize router
+export default function BecomeTeacherRequestForm() {
+  const [reason, setReason] = useState("");
+  const [submitted, setSubmitted] = useState(false);
 
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    message: "",
-  });
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Request submitted:", formData);
-    alert("Request sent!");
-
-    // Reset form
-    setFormData({ fullName: "", email: "", message: "" });
-
-    // Redirect to settings page
-    router.push("/Setting");
+    const res = await fetch("/api/teacher-request", {
+      method: "POST",
+      body: JSON.stringify({ reason }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+    if (res.ok) setSubmitted(true);
   };
 
-  return (
-    <form
-  onSubmit={handleSubmit}
-  className="custom-form bg-white text-black p-8 rounded-lg shadow-md w-full max-w-md dark:bg-zinc-900 dark:text-white"
->
-
-      <h1 className="text-2xl font-bold mb-6 text-center  ">
-        Request to Become a Teacher
-      </h1>
-
-      <input
-        type="text"
-        name="fullName"
-        placeholder="Full Name"
-        value={formData.fullName}
-        onChange={handleChange}
-        className="w-full p-2 mb-4 border rounded"
-        required
-      />
-
-      <input
-        type="email"
-        name="email"
-        placeholder="Email Address"
-        value={formData.email}
-        onChange={handleChange}
-        className="w-full p-2 mb-4 border rounded"
-        required
-      />
-
+  return submitted ? (
+    <p className="text-green-400">Request submitted! ✅</p>
+  ) : (
+    <form onSubmit={handleSubmit} className="space-y-4">
       <textarea
-        name="message"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
         placeholder="Why do you want to become a teacher?"
-        value={formData.message}
-        onChange={handleChange}
-        rows={4}
-        className="w-full p-2 mb-4 border rounded"
+        className="w-full p-2 rounded bg-white/10 text-white"
         required
       />
-
-      <button
-        type="submit"
-        className="w-full bg-green-600 hover:bg-green-800 text-white p-2 rounded font-bold"
-      >
-        Submit Request
+      <button type="submit" className="bg-yellow-400 text-black px-4 py-2 rounded">
+        Send Request
       </button>
     </form>
   );

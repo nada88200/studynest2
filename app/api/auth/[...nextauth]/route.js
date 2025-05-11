@@ -127,6 +127,7 @@ export const authOptions = {
         token.photo = user.photo;
         token.role = user.role;
         token.archives = user.archives;
+        token.userCourses = user.userCourses || [];
       }
       
       // Handle session updates from client
@@ -144,6 +145,7 @@ export const authOptions = {
         session.user.photo = token.photo;
         session.user.role = token.role;
         session.user.archives = token.archives;
+        session.user.userCourses = token.userCourses || [];
       }
       return session;
     },

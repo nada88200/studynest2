@@ -36,17 +36,20 @@ const userSchema = new Schema(
       type: String,
       default: process.env.NEXT_PUBLIC_DEFAULT_PROFILE_PHOTO  // Add this new field
     },
-    // archive: [{
-    //   type: Schema.Types.ObjectId,
-    //   ref: "Archive",
-    //   default: []
-    // }]
+
+    userCourses: [{
+      type: Schema.Types.ObjectId,
+      ref: "Course",
+      default: []
+    }],
+
+
     archive: [{
       type: Schema.Types.ObjectId,
       ref: "Archive",
       default: []
     }]
-    
+
   },
   {  timestamps: true,
     strictPopulate: false // Add this to prevent strict population errors
