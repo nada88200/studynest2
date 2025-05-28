@@ -80,7 +80,7 @@ export default function HomePage() {
        <div><Review/></div>
        <div><Article/></div>
       
-      
+       <script src="https://app.rasheed.ai/static/chatbot/js/chatbubble.js" data-id="cad4a91b-c27a-4969-93bc-9dea1856488e" data-domain="https://app.rasheed.ai" data-position="right" ></script>
       
 
 

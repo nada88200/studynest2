@@ -48,9 +48,13 @@ const userSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "Archive",
       default: []
-    }]
+    }],
+    
+
+
 
   },
+  
   {  timestamps: true,
     strictPopulate: false // Add this to prevent strict population errors
      }
