@@ -320,7 +320,6 @@ export default function SettingsPage() {
                 >
                   <FaTrash className="inline mr-2" /> Delete Account
                 </button>
-                
                   <button
                     onClick={() => signOut()}
                     className="w-full bg-gray-700 hover:bg-gray-600 transition text-white py-2 px-4 rounded-lg font-medium flex items-center justify-center gap-2"

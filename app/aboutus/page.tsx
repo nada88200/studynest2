@@ -1,34 +1,5 @@
-// // app/aboutus/page.tsx OR pages/aboutus.tsx
-// 'use client'; // Only if you're using the App Router and want to use client-side navigation
 
-// import React from 'react';
-// import Link from 'next/link';
-
-// const AboutUsPage = () => {
-//   return (
-//     <main className="min-h-screen bg-gray-100 py-20 px-6">
-//       <div className="max-w-4xl mx-auto text-center">
-//         <h1 className="text-3xl font-bold mb-6">About StudyNest</h1>
-//         <p className="text-gray-700 text-lg leading-relaxed mb-8">
-//           StudyNest is dedicated to empowering students through high-quality online education.
-//           We bring together expert instructors, interactive content, and a supportive learning environment
-//           to help you succeed in your academic and professional journey.
-//         </p>
-
-//         {/* Back to Dashboard Button */}
-//         <Link href="/dashboard">
-//           <button className="mt-4 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
-//             Back to Dashboard
-//           </button>
-//         </Link>
-//       </div>
-//     </main>
-//   );
-// };
-
-// export default AboutUsPage;
-// app/aboutus/page.tsx OR pages/aboutus.tsx
-'use client'; // Only if you're using the App Router
+'use client'; 
 
 import React from 'react';
 import Link from 'next/link';

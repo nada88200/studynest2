@@ -1,3 +1,4 @@
+// app/api/upload-profile-image/route.js
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "../auth/[...nextauth]/route";
 import connectMongoDB from "@/lib/mongodb";

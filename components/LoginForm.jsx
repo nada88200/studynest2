@@ -6,7 +6,7 @@ import { signIn } from "next-auth/react";
 import { useSession } from "next-auth/react";
 
 // Import the CSS file
-import "../styles/css/LoginForm.css";
+import "@/styles/css/LoginForm.css";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");

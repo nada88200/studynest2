@@ -1,3 +1,4 @@
+// data/data.js
 export const coursesData = [
     {
       id: 1,

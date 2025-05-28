@@ -29,66 +29,13 @@ export default function ArchivePage() {
       setIsLoading(false);
     }
   };
-// const fetchFiles = async () => {
-//   try {
-//     setIsLoading(true);
-//     const response = await fetch("/api/files");
-//     if (!response.ok) throw new Error("Failed to fetch files");
-//     const data = await response.json();
 
-//     // Add preview URLs for each file
-//     const filesWithPreview = data.map((file) => ({
-//       ...file,
-//       preview: `/api/files/preview?id=${file._id}`, // assuming you can generate a URL like this
-//     }));
-
-//     setFiles(filesWithPreview);
-//   } catch (error) {
-//     console.error("Error fetching files:", error);
-//   } finally {
-//     setIsLoading(false);
-//   }
-// };
 
   const handleTagChange = (e) => {
     setTag(e.target.value);
   };
 
-  // const handleBrowse = async (e) => {
-  //   if (!session?.user?.id) return;
-  //   const selectedFiles = Array.from(e.target.files);
-
-  //   try {
-  //     const uploadPromises = selectedFiles.map(async (file) => {
-  //       const fileData = {
-  //         name: file.name,
-  //         type: file.type,
-  //         size: file.size,
-  //         tag,
-  //         preview: URL.createObjectURL(file),
-  //       };
-
-  //       await fetch("/api/files", {
-  //         method: "POST",
-  //         headers: { "Content-Type": "application/json" },
-  //         body: JSON.stringify({
-  //           name: file.name,
-  //           type: file.type,
-  //           size: file.size,
-  //           tag,
-  //         }),
-  //       });
-
-  //       return fileData;
-  //     });
-
-  //     const newFiles = await Promise.all(uploadPromises);
-  //     setFiles((prevFiles) => [...prevFiles, ...newFiles]);
-  //   } catch (error) {
-  //     console.error("Upload error:", error);
-  //   }
-  //   await fetchFiles();
-  // };
+ 
   const handleBrowse = async (e) => {
     if (!session?.user?.id) return;
     const selectedFiles = Array.from(e.target.files);
@@ -125,16 +72,7 @@ export default function ArchivePage() {
     }
   };
 
-  // const handleDownload = (file) => {
-  //   const link = document.createElement("a");
-  //   link.href = file.preview;
-  //   link.download = file.name;
-  //   link.click();
-  // };
 
-  // const handleOpen = (file) => {
-  //   window.open(file.preview, "_blank");
-  // };
   const handleDownload = (file) => {
     const link = document.createElement("a");
     link.href = file.preview;
