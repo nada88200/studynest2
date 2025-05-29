@@ -1,78 +1,56 @@
 import mongoose from 'mongoose';
 
-const communitySchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 100,
-    },
-    description: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 500,
-    },
-    type: {
-      type: String,
-      enum: ['public', 'private'],
-      default: 'public',
-    },
-    creator: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    members: [{
-      user: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true,
-      },
-      joinedAt: {
-        type: Date,
-        default: Date.now,
-      },
-      role: {
-        type: String,
-        enum: ['admin', 'moderator', 'member'],
-        default: 'member',
-      },
-    }],
-    memberCount: {
-      type: Number,
-      default: 1,
-    },
-    avatar: {
-      type: String,
-      default: null,
-    },
-    rules: [{
-      type: String,
-      trim: true,
-    }],
-    isActive: {
-      type: Boolean,
-      default: true,
-    },
-    lastActivity: {
-      type: Date,
-      default: Date.now,
-    },
+const communitySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 50
   },
-  {
-    timestamps: true,
+  description: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 500
+  },
+  type: {
+    type: String,
+    enum: ['public', 'private'],
+    default: 'public'
+  },
+  creator: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  members: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  moderators: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  avatar: {
+    type: String,
+    default: ''
+  },
+  rules: {
+    type: [String],
+    default: [
+      'Be respectful to all members',
+      'No spam or self-promotion',
+      'Keep discussions on-topic',
+      'No offensive language'
+    ]
   }
-);
-
-communitySchema.index({ type: 1, isActive: 1 });
-communitySchema.index({ 'members.user': 1 });
-
-// Update memberCount when members array changes
-communitySchema.pre('save', function(next) {
-  this.memberCount = this.members.length;
-  next();
+}, {
+  timestamps: true
 });
 
-export default mongoose.models.Community || mongoose.model('Community', communitySchema);
+// Add index for search functionality
+communitySchema.index({ name: 'text', description: 'text' });
+
+const Community = mongoose.models.Community || mongoose.model('Community', communitySchema);
+
+export default Community;

@@ -49,9 +49,27 @@ const userSchema = new Schema(
       ref: "Archive",
       default: []
     }],
-    
-
-
+    communities: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Community',
+      default: []
+    }],
+    communityInvites: [{
+      community: {
+        type: Schema.Types.ObjectId,
+        ref: 'Community'
+      },
+      inviter: {
+        type: Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      status: {
+        type: String,
+        enum: ['pending', 'accepted', 'rejected'],
+        default: 'pending'
+      },
+      default: []
+    }],
 
   },
   

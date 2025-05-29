@@ -3,15 +3,13 @@
 import React, { useState, useEffect } from 'react';
 import { Nav } from '@/Home/Navbar/Nav';
 import { useSession } from 'next-auth/react';
-import { FaLock, FaGlobe, FaPlus, FaUsers, FaTimes, FaUser } from 'react-icons/fa';
+import { FaLock, FaGlobe, FaPlus, FaUsers, FaTimes, FaUser, FaSearch } from 'react-icons/fa';
 import { v4 as uuidv4 } from 'uuid';
 import { useRouter } from 'next/navigation';
 
-// Enhanced Avatar component with colored fallback
 const Avatar = ({ src, name, size = 8 }) => {
   const [imgError, setImgError] = useState(false);
   
-  // Generate consistent color from initials
   const getColorFromInitials = (initials) => {
     if (!initials) return 'from-purple-600 to-purple-700';
     
@@ -64,124 +62,193 @@ export default function CommunitiesPage() {
   const [communities, setCommunities] = useState([]);
   const [selectedCommunity, setSelectedCommunity] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [communityTypeFilter, setCommunityTypeFilter] = useState('all');
   const [newCommunity, setNewCommunity] = useState({
     name: '',
     description: '',
     type: 'public',
   });
-  const [messages, setMessages] = useState([
-    { 
-      id: 1, 
-      text: 'Hello, welcome to the community!', 
-      sender: 'Community Bot',
-      timestamp: new Date(Date.now() - 3600000),
-    },
-    { 
-      id: 2, 
-      text: 'Thank you! Happy to be here.', 
-      sender: session?.user?.name || 'You',
-      timestamp: new Date(Date.now() - 1800000),
-    },
-    {
-      id: 3,
-      text: 'Has anyone worked with the new React features?',
-      sender: 'JaneDoe',
-      timestamp: new Date(Date.now() - 900000),
-    }
-  ]);
+  const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
 
   useEffect(() => {
-    // Simulate loading communities
-    setCommunities([
-      {
-        id: uuidv4(),
-        name: 'Frontend Wizards',
-        description: 'A community for frontend developers to share knowledge and collaborate.',
-        type: 'public',
-        creator: 'admin',
-        members: 120,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        name: 'Backend Masters',
-        description: 'For backend developers discussing server-side technologies.',
-        type: 'public',
-        creator: 'serverGuru',
-        members: 85,
-        createdAt: new Date(),
-      },
-      {
-        id: uuidv4(),
-        name: 'Exclusive Designers',
-        description: 'Private community for experienced UI/UX designers.',
-        type: 'private',
-        creator: 'designLead',
-        members: 42,
-        createdAt: new Date(),
+    const fetchCommunities = async () => {
+      setIsLoading(true);
+      try {
+        let url = '/api/communities';
+        const params = new URLSearchParams();
+        
+        if (searchTerm) params.append('search', searchTerm);
+        if (communityTypeFilter !== 'all') params.append('type', communityTypeFilter);
+        
+        if (params.toString()) url += `?${params.toString()}`;
+        
+        const res = await fetch(url);
+        const data = await res.json();
+        setCommunities(data);
+      } catch (error) {
+        console.error('Error fetching communities:', error);
+      } finally {
+        setIsLoading(false);
       }
-    ]);
-  }, []);
+    };
+    
+    fetchCommunities();
+  }, [searchTerm, communityTypeFilter]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setNewCommunity((prev) => ({ ...prev, [name]: value }));
-  };
+  useEffect(() => {
+    if (!selectedCommunity) return;
+    
+    const fetchMessages = async () => {
+      try {
+        const res = await fetch(`/api/communities/${selectedCommunity._id}/messages`);
+        const data = await res.json();
+        setMessages(data);
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+    
+    fetchMessages();
+  }, [selectedCommunity]);
 
-  const handleCreateCommunity = (e) => {
+  const handleCreateCommunity = async (e) => {
     e.preventDefault();
     if (newCommunity.name.trim() === '' || newCommunity.description.trim() === '') {
       alert('Community Name and Description are required.');
       return;
     }
-    const newComm = {
-      ...newCommunity,
-      id: uuidv4(),
-      creator: session?.user?.name || 'anonymous',
-      members: 1,
-      createdAt: new Date(),
-    };
-    setCommunities((prev) => [...prev, newComm]);
-    setSelectedCommunity(newComm);
-    setNewCommunity({ name: '', description: '', type: 'public' });
-    setIsModalOpen(false);
-    
-    // Add welcome message
-    setMessages(prev => [
-      ...prev,
-      {
-        id: uuidv4(),
-        text: `Welcome to the new "${newComm.name}" community! Start the conversation.`,
-        sender: 'System',
-        timestamp: new Date(),
+
+    try {
+      const res = await fetch('/api/communities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCommunity),
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to create community');
       }
-    ]);
+      
+      const createdCommunity = await res.json();
+      setCommunities(prev => [...prev, createdCommunity]);
+      setSelectedCommunity(createdCommunity);
+      setNewCommunity({ name: '', description: '', type: 'public' });
+      setIsModalOpen(false);
+      
+      setMessages(prev => [
+        ...prev,
+        {
+          _id: uuidv4(),
+          text: `Welcome to the new "${createdCommunity.name}" community! Start the conversation.`,
+          sender: { name: 'System' },
+          createdAt: new Date(),
+          systemMessage: true
+        }
+      ]);
+    } catch (error) {
+      console.error('Error creating community:', error);
+      alert('Failed to create community');
+    }
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (newMessage.trim() !== '') {
-      const newMsg = {
-        id: uuidv4(),
-        text: newMessage,
-        sender: session?.user?.name || 'You',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, newMsg]);
+    if (!newMessage.trim() || !selectedCommunity) return;
+    
+    try {
+      const res = await fetch(`/api/communities/${selectedCommunity._id}/messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text: newMessage }),
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to send message');
+      }
+      
+      const sentMessage = await res.json();
+      setMessages(prev => [...prev, sentMessage]);
       setNewMessage('');
       
-      // Scroll to bottom
       setTimeout(() => {
         const chatContainer = document.getElementById('chat-messages');
         if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
       }, 100);
+    } catch (error) {
+      console.error('Error sending message:', error);
     }
   };
 
-  const formatTime = (date) => {
+  const handleJoinCommunity = async (communityId) => {
+    try {
+      const res = await fetch(`/api/communities/${communityId}/members`, {
+        method: 'POST',
+      });
+      
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+      
+      // Refresh communities list
+      const updated = await fetch('/api/communities').then(res => res.json());
+      setCommunities(updated);
+      
+      // If this was the selected community, refresh messages
+      if (selectedCommunity?._id === communityId) {
+        const updatedMessages = await fetch(`/api/communities/${communityId}/messages`).then(res => res.json());
+        setMessages(updatedMessages);
+      }
+    } catch (error) {
+      console.error('Error joining community:', error);
+      alert(error.message);
+    }
+  };
+
+  const handleLeaveCommunity = async (communityId) => {
+    if (!confirm('Are you sure you want to leave this community?')) return;
+    
+    try {
+      const res = await fetch(`/api/communities/${communityId}/members`, {
+        method: 'DELETE',
+      });
+      
+      if (!res.ok) {
+        throw new Error('Failed to leave community');
+      }
+      
+      // Refresh communities list
+      const updated = await fetch('/api/communities').then(res => res.json());
+      setCommunities(updated);
+      
+      // If this was the selected community, clear it
+      if (selectedCommunity?._id === communityId) {
+        setSelectedCommunity(null);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error leaving community:', error);
+      alert(error.message);
+    }
+  };
+
+  const formatTime = (dateString) => {
+    const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
+
+  const filteredCommunities = communities.filter(community => {
+    const matchesSearch = community.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                         community.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = communityTypeFilter === 'all' || community.type === communityTypeFilter;
+    return matchesSearch && matchesType;
+  });
 
   return (
     <div className='min-h-screen bg-gradient-to-br from-indigo-900 to-purple-800 dark:bg-gray-900 flex flex-col'>
@@ -197,40 +264,94 @@ export default function CommunitiesPage() {
             <FaPlus /> Create Community
           </button>
 
+          <div className='mt-4 space-y-3'>
+            <div className='relative'>
+              <input
+                type='text'
+                placeholder='Search communities...'
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className='w-full pl-10 pr-4 py-2 rounded-lg bg-white/10 border border-white/20 text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-500'
+              />
+              <FaSearch className='absolute left-3 top-3 text-white/50' />
+            </div>
+
+            <div className='flex gap-2'>
+              <button
+                onClick={() => setCommunityTypeFilter('all')}
+                className={`text-sm px-3 py-1 rounded-full ${
+                  communityTypeFilter === 'all' 
+                    ? 'bg-white text-purple-800' 
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setCommunityTypeFilter('public')}
+                className={`text-sm px-3 py-1 rounded-full flex items-center gap-1 ${
+                  communityTypeFilter === 'public' 
+                    ? 'bg-green-500/90 text-white' 
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                <FaGlobe size={12} /> Public
+              </button>
+              <button
+                onClick={() => setCommunityTypeFilter('private')}
+                className={`text-sm px-3 py-1 rounded-full flex items-center gap-1 ${
+                  communityTypeFilter === 'private' 
+                    ? 'bg-red-500/90 text-white' 
+                    : 'bg-white/10 hover:bg-white/20'
+                }`}
+              >
+                <FaLock size={12} /> Private
+              </button>
+            </div>
+          </div>
+
           <div className='space-y-3 mt-4'>
             <h3 className='font-bold text-lg mb-2'>Your Communities</h3>
-            {communities.map((community) => (
-              <div
-                key={community.id}
-                className={`bg-white bg-opacity-10 backdrop-blur-sm p-3 rounded-lg cursor-pointer hover:bg-opacity-20 transition duration-300 ${
-                  selectedCommunity?.id === community.id ? 'ring-2 ring-indigo-500 bg-opacity-30' : ''
-                }`}
-                onClick={() => setSelectedCommunity(community)}
-              >
-                <div className='flex items-start gap-3'>
-                  <Avatar name={community.name} size={10} />
-                  <div className='flex-1'>
-                    <div className='flex justify-between items-start'>
-                      <h3 className='font-bold'>{community.name}</h3>
-                      <span className='flex items-center gap-1 text-xs'>
-                        <FaUsers /> {community.members}
-                      </span>
-                    </div>
-                    <p className='text-sm text-gray-300 line-clamp-1'>{community.description}</p>
-                    <div className='flex items-center gap-1 mt-1 text-xs'>
-                      {community.type === 'private' ? (
-                        <FaLock className='text-red-400' />
-                      ) : (
-                        <FaGlobe className='text-green-400' />
-                      )}
-                      <span className='text-gray-400'>
-                        Created {community.createdAt.toLocaleDateString()}
-                      </span>
+            {isLoading ? (
+              <div className='flex justify-center py-8'>
+                <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-white'></div>
+              </div>
+            ) : filteredCommunities.length === 0 ? (
+              <p className='text-center text-white/70 py-4'>No communities found</p>
+            ) : (
+              filteredCommunities.map((community) => (
+                <div
+                  key={community._id}
+                  className={`bg-white bg-opacity-10 backdrop-blur-sm p-3 rounded-lg cursor-pointer hover:bg-opacity-20 transition duration-300 ${
+                    selectedCommunity?._id === community._id ? 'ring-2 ring-indigo-500 bg-opacity-30' : ''
+                  }`}
+                  onClick={() => setSelectedCommunity(community)}
+                >
+                  <div className='flex items-start gap-3'>
+                    <Avatar name={community.name} size={10} />
+                    <div className='flex-1'>
+                      <div className='flex justify-between items-start'>
+                        <h3 className='font-bold'>{community.name}</h3>
+                        <span className='flex items-center gap-1 text-xs'>
+                          <FaUsers /> {community.members?.length || 0}
+                        </span>
+                      </div>
+                      <p className='text-sm text-gray-300 line-clamp-1'>{community.description}</p>
+                      <div className='flex items-center gap-1 mt-1 text-xs'>
+                        {community.type === 'private' ? (
+                          <FaLock className='text-red-400' />
+                        ) : (
+                          <FaGlobe className='text-green-400' />
+                        )}
+                        <span className='text-gray-400'>
+                          Created {new Date(community.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
@@ -259,67 +380,94 @@ export default function CommunitiesPage() {
                       </span>
                     )}
                     <span className='text-gray-500 dark:text-gray-400'>
-                      • {selectedCommunity.members} members
-                      • Created {selectedCommunity.createdAt.toLocaleDateString()}
+                      • {selectedCommunity.members?.length || 0} members
+                      • Created {new Date(selectedCommunity.createdAt).toLocaleDateString()}
                     </span>
+                  </div>
+                  <div className='mt-3 flex gap-2'>
+                    {selectedCommunity.members?.includes(session?.user?.id) ? (
+                      <button
+                        onClick={() => handleLeaveCommunity(selectedCommunity._id)}
+                        className='px-3 py-1 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg text-sm hover:bg-red-200 dark:hover:bg-red-800 transition'
+                      >
+                        Leave Community
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleJoinCommunity(selectedCommunity._id)}
+                        className='px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm hover:bg-green-200 dark:hover:bg-green-800 transition'
+                      >
+                        Join Community
+                      </button>
+                    )}
                   </div>
                 </div>
 
                 <div id='chat-messages' className='flex-1 overflow-y-auto space-y-4 mb-4'>
                   {messages.map((msg) => (
                     <div 
-                      key={msg.id} 
-                      className={`flex gap-3 ${msg.sender === (session?.user?.name || 'You') ? 'justify-end' : 'justify-start'}`}
+                      key={msg._id} 
+                      className={`flex gap-3 ${
+                        msg.sender?._id === session?.user?.id || msg.sender === 'You' 
+                          ? 'justify-end' 
+                          : 'justify-start'
+                      }`}
                     >
-                      {msg.sender !== (session?.user?.name || 'You') && (
+                      {(msg.sender?._id !== session?.user?.id && !msg.systemMessage) && (
                         <Avatar 
-                          name={msg.sender} 
+                          name={msg.sender?.name} 
                           size={8}
                         />
                       )}
                       <div 
                         className={`max-w-[70%] rounded-lg p-3 ${
-                          msg.sender === (session?.user?.name || 'You') 
+                          msg.sender?._id === session?.user?.id || msg.sender === 'You'
                             ? 'bg-purple-600 text-white rounded-br-none' 
-                            : msg.sender === 'System'
+                            : msg.systemMessage
                               ? 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-bl-none'
                               : 'bg-blue-500 text-white rounded-bl-none'
                         }`}
                       >
-                        {msg.sender !== (session?.user?.name || 'You') && msg.sender !== 'System' && (
-                          <div className='font-bold text-xs mb-1'>{msg.sender}</div>
+                        {msg.sender?._id !== session?.user?.id && !msg.systemMessage && (
+                          <div className='font-bold text-xs mb-1'>{msg.sender?.name}</div>
                         )}
                         <div>{msg.text}</div>
                         <div className={`text-xs mt-1 ${
-                          msg.sender === (session?.user?.name || 'You') 
+                          msg.sender?._id === session?.user?.id || msg.sender === 'You'
                             ? 'text-purple-200' 
                             : 'text-gray-500 dark:text-gray-400'
                         }`}>
-                          {formatTime(msg.timestamp)}
+                          {formatTime(msg.createdAt)}
                         </div>
                       </div>
                     </div>
                   ))}
                 </div>
 
-                <form onSubmit={handleSendMessage} className='mt-auto'>
-                  <div className='flex gap-2'>
-                    <input
-                      type='text'
-                      placeholder='Type a message...'
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      className='flex-1 p-3 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500'
-                    />
-                    <button 
-                      type='submit' 
-                      className='bg-purple-700 hover:bg-purple-800 p-3 text-white rounded-lg transition duration-300'
-                      disabled={!newMessage.trim()}
-                    >
-                      Send
-                    </button>
+                {selectedCommunity.members?.includes(session?.user?.id) ? (
+                  <form onSubmit={handleSendMessage} className='mt-auto'>
+                    <div className='flex gap-2'>
+                      <input
+                        type='text'
+                        placeholder='Type a message...'
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        className='flex-1 p-3 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500'
+                      />
+                      <button 
+                        type='submit' 
+                        className='bg-purple-700 hover:bg-purple-800 p-3 text-white rounded-lg transition duration-300'
+                        disabled={!newMessage.trim()}
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className='mt-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center'>
+                    Join this community to participate in the conversation
                   </div>
-                </form>
+                )}
               </div>
             ) : (
               <div className='flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400'>
@@ -368,18 +516,18 @@ export default function CommunitiesPage() {
                     <div className='flex justify-between'>
                       <span className='text-gray-600 dark:text-gray-400'>Members:</span>
                       <span className='font-medium flex items-center gap-1'>
-                        <FaUsers /> {selectedCommunity.members}
+                        <FaUsers /> {selectedCommunity.members?.length || 0}
                       </span>
                     </div>
                     <div className='flex justify-between'>
                       <span className='text-gray-600 dark:text-gray-400'>Created:</span>
                       <span className='font-medium'>
-                        {selectedCommunity.createdAt.toLocaleDateString()}
+                        {new Date(selectedCommunity.createdAt).toLocaleDateString()}
                       </span>
                     </div>
                     <div className='flex justify-between'>
                       <span className='text-gray-600 dark:text-gray-400'>Creator:</span>
-                      <span className='font-medium'>{selectedCommunity.creator}</span>
+                      <span className='font-medium'>{selectedCommunity.creator?.name || 'Unknown'}</span>
                     </div>
                   </div>
                 </div>
@@ -387,19 +535,20 @@ export default function CommunitiesPage() {
                 <div className='bg-white dark:bg-gray-800 p-4 rounded-lg shadow'>
                   <h4 className='font-bold mb-3'>Community Rules</h4>
                   <ul className='list-disc pl-5 space-y-2 text-sm'>
-                    <li>Be respectful to all members</li>
-                    <li>No spam or self-promotion</li>
-                    <li>Keep discussions on-topic</li>
-                    <li>No offensive language</li>
-                    {selectedCommunity.type === 'private' && (
-                      <li className='text-red-500'>Do not share private community content</li>
-                    )}
+                    {selectedCommunity.rules?.map((rule, index) => (
+                      <li key={index}>{rule}</li>
+                    ))}
                   </ul>
                 </div>
 
-                <button className='w-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 py-2 rounded-lg font-medium hover:bg-red-200 dark:hover:bg-red-800 transition duration-300'>
-                  Leave Community
-                </button>
+                {selectedCommunity.members?.includes(session?.user?.id) && (
+                  <button 
+                    onClick={() => handleLeaveCommunity(selectedCommunity._id)}
+                    className='w-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 py-2 rounded-lg font-medium hover:bg-red-200 dark:hover:bg-red-800 transition duration-300'
+                  >
+                    Leave Community
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -427,7 +576,7 @@ export default function CommunitiesPage() {
                   type='text'
                   name='name'
                   value={newCommunity.name}
-                  onChange={handleInputChange}
+                  onChange={(e) => setNewCommunity({...newCommunity, name: e.target.value})}
                   className='w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600'
                   placeholder='e.g. React Developers'
                   required
@@ -439,7 +588,7 @@ export default function CommunitiesPage() {
                 <textarea
                   name='description'
                   value={newCommunity.description}
-                  onChange={handleInputChange}
+                  onChange={(e) => setNewCommunity({...newCommunity, description: e.target.value})}
                   className='w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600'
                   placeholder='What is this community about?'
                   rows={3}
@@ -456,7 +605,7 @@ export default function CommunitiesPage() {
                       name='type'
                       value='public'
                       checked={newCommunity.type === 'public'}
-                      onChange={handleInputChange}
+                      onChange={() => setNewCommunity({...newCommunity, type: 'public'})}
                       className='text-purple-600'
                     />
                     <div className='flex items-center gap-1'>
@@ -470,7 +619,7 @@ export default function CommunitiesPage() {
                       name='type'
                       value='private'
                       checked={newCommunity.type === 'private'}
-                      onChange={handleInputChange}
+                      onChange={() => setNewCommunity({...newCommunity, type: 'private'})}
                       className='text-purple-600'
                     />
                     <div className='flex items-center gap-1'>

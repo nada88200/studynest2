@@ -1,42 +1,93 @@
+import { getServerSession } from 'next-auth/next';
+import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import Community from '@/models/Community';
+import CommunityMessage from '@/models/CommunityMessage';
 import connectMongoDB from "@/lib/mongodb";
-import Message from '@/models/Message'; 
-import Community from '@/models/Community'; 
+import { NextResponse } from 'next/server';
 
-export default async function handler(req, res) {
-  const { id } = req.query; // Community ID
-  await connectMongoDB();
+// Get all messages for a community
+export async function GET(request, { params }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
-  if (req.method === 'GET') {
-    try {
-      // Find messages for the specific community, sorted by timestamp
-      const messages = await Message.find({ community: id }).sort({ timestamp: 1 });
-      res.status(200).json({ success: true, data: messages });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
+  try {
+    await connectMongoDB();
+    const community = await Community.findById(params.id);
+
+    if (!community) {
+      return NextResponse.json({ error: 'Community not found' }, { status: 404 });
     }
-  } else if (req.method === 'POST') {
-    try {
-      const { sender, text } = req.body;
-      if (!sender || !text) {
-        return res.status(400).json({ success: false, message: 'Sender and text are required.' });
-      }
 
-      const communityExists = await Community.findById(id);
-      if (!communityExists) {
-        return res.status(404).json({ success: false, message: 'Community not found.' });
-      }
-
-      const message = await Message.create({
-        community: id,
-        sender,
-        text,
-      });
-      res.status(201).json({ success: true, data: message });
-    } catch (error) {
-      res.status(400).json({ success: false, message: error.message });
+    // Check if user is a member (for private communities)
+    if (community.type === 'private' && !community.members.includes(session.user.id)) {
+      return NextResponse.json({ error: 'Not a member of this private community' }, { status: 403 });
     }
-  } else {
-    res.setHeader('Allow', ['GET', 'POST']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit')) || 50;
+    const skip = parseInt(searchParams.get('skip')) || 0;
+
+    const messages = await CommunityMessage.find({ community: params.id })
+      .populate('sender', 'name email')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    return NextResponse.json(messages.reverse()); // Reverse to show oldest first
+  } catch (error) {
+    console.error('Error fetching messages:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch messages' },
+      { status: 500 }
+    );
+  }
+}
+
+// Create a new message in community
+export async function POST(request, { params }) {
+  const session = await getServerSession(authOptions);
+  if (!session) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    await connectMongoDB();
+    const community = await Community.findById(params.id);
+
+    if (!community) {
+      return NextResponse.json({ error: 'Community not found' }, { status: 404 });
+    }
+
+    // Check if user is a member (for private communities)
+    if (community.type === 'private' && !community.members.includes(session.user.id)) {
+      return NextResponse.json({ error: 'Not a member of this private community' }, { status: 403 });
+    }
+
+    const { text } = await request.json();
+
+    if (!text || text.trim() === '') {
+      return NextResponse.json({ error: 'Message text is required' }, { status: 400 });
+    }
+
+    const newMessage = new CommunityMessage({
+      community: params.id,
+      sender: session.user.id,
+      text: text.trim()
+    });
+
+    await newMessage.save();
+
+    // Populate sender info before returning
+    await newMessage.populate('sender', 'name email');
+
+    return NextResponse.json(newMessage, { status: 201 });
+  } catch (error) {
+    console.error('Error creating message:', error);
+    return NextResponse.json(
+      { error: 'Failed to create message' },
+      { status: 500 }
+    );
   }
 }
