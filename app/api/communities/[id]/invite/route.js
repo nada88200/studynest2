@@ -1,7 +1,7 @@
 import { getServerSession } from 'next-auth/next';
-import { authOptions } from '@/app/api/auth/[...nextauth]/route';
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import Community from '@/models/Community';
-import User from '@/models/User';
+import User from '@/models/user';
 import connectMongoDB from "@/lib/mongodb";
 import { NextResponse } from 'next/server';
 

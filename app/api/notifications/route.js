@@ -2,7 +2,7 @@
 import connectMongoDB from "@/lib/mongodb";
 import Notification from "@/models/Notification";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 
 export async function GET() {
   await connectMongoDB();

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import connectMongoDB from "@/lib/mongodb";
 import Archive from "@/models/Archive";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import cloudinary from "@/lib/cloudinary";
 
 export async function POST(req) {

@@ -1,6 +1,6 @@
 // app/api/update-profile/route.js
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import  connectMongoDB  from "@/lib/mongodb";
 import User from "@/models/user";
 import bcrypt from "bcryptjs";

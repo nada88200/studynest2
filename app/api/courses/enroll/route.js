@@ -1,7 +1,7 @@
 // // app/api/courses/enroll/route.js
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import connectMongoDB from "@/lib/mongodb";
 import User from "@/models/user";
 import Course from "@/models/Course";

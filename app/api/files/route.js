@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import connectMongoDB from "@/lib/mongodb"; // <-- remove {}
 import Archive from "@/models/Archive";
 import { getServerSession } from "next-auth/next"; // <-- more correct import
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 
 export async function POST(req) {
   await connectMongoDB();
