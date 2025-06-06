@@ -90,7 +90,7 @@ const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe, onClick })
             </div>
             <div className="flex items-center space-x-2">
               <FaUserGroup className="w-4 h-4 text-orange-600" />
-              <p className="text-base font-semibold text-gray-800">{course.students?.length || 0} Students</p>
+              <p className="text-base font-semibold text-gray-800">{course.students || 0} Students</p>
             </div>
           </div>
 
@@ -279,6 +279,8 @@ export default function CoursesPage() {
               currentUserRole={currentUserRole}
               onDelete={() => handleDeleteCourse(course._id)}
               onClick={() => router.push(`/courses/${course._id}`)}
+              isEnrolled={false} // Tutors don't need enrollment status for their own courses
+
             />
           ))
         ) : (
@@ -340,7 +342,9 @@ export default function CoursesPage() {
           {currentUserRole === "tutor" && showAddCourseForm && (
             <div className="bg-gradient-to-br from-purple-600 to-indigo-800 dark:from-[#2d3748] dark:to-[#2d3748] p-8 rounded-2xl shadow-2xl mb-12 text-white">
               <h2 className="text-4xl font-bold mb-8">Add New Course</h2>
-              <form onSubmit={handleAddCourse} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <form action="/api/courses" 
+  method="POST" 
+  encType="multipart/form-data" onSubmit={handleAddCourse} className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="flex flex-col">
                   <label className="text-xl font-semibold mb-2">Course Title*</label>
                   <input

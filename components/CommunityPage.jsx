@@ -72,6 +72,13 @@ export default function CommunitiesPage() {
   });
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
+  const [isJoining, setIsJoining] = useState(false);
+
+const checkMembership = (community) => {
+  return community?.members?.some(member => 
+    typeof member === 'object' ? member._id === session?.user?.id : member === session?.user?.id
+  );
+};
 
   useEffect(() => {
     const fetchCommunities = async () => {
@@ -87,6 +94,14 @@ export default function CommunitiesPage() {
         
         const res = await fetch(url);
         const data = await res.json();
+        
+        if (selectedCommunity) {
+          const updatedSelected = data.find(c => c._id === selectedCommunity._id);
+          if (updatedSelected) {
+            setSelectedCommunity(updatedSelected);
+          }
+        }
+        
         setCommunities(data);
       } catch (error) {
         console.error('Error fetching communities:', error);
@@ -105,9 +120,10 @@ export default function CommunitiesPage() {
       try {
         const res = await fetch(`/api/communities/${selectedCommunity._id}/messages`);
         const data = await res.json();
-        setMessages(data);
+        setMessages(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error('Error fetching messages:', error);
+        setMessages([]);
       }
     };
     
@@ -120,14 +136,17 @@ export default function CommunitiesPage() {
       alert('Community Name and Description are required.');
       return;
     }
-
+  
     try {
       const res = await fetch('/api/communities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newCommunity),
+        body: JSON.stringify({
+          ...newCommunity,
+          members: [session.user.id]
+        }),
       });
       
       if (!res.ok) {
@@ -136,12 +155,14 @@ export default function CommunitiesPage() {
       
       const createdCommunity = await res.json();
       setCommunities(prev => [...prev, createdCommunity]);
-      setSelectedCommunity(createdCommunity);
+      setSelectedCommunity({
+        ...createdCommunity,
+        members: [session.user.id]
+      });
       setNewCommunity({ name: '', description: '', type: 'public' });
       setIsModalOpen(false);
       
-      setMessages(prev => [
-        ...prev,
+      setMessages([
         {
           _id: uuidv4(),
           text: `Welcome to the new "${createdCommunity.name}" community! Start the conversation.`,
@@ -158,56 +179,113 @@ export default function CommunitiesPage() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !selectedCommunity) return;
     
+    // Validation checks
+    if (!newMessage.trim()) {
+      alert('Message cannot be empty');
+      return;
+    }
+  
+    if (!selectedCommunity) {
+      console.error('No community selected');
+      return;
+    }
+  
     try {
-      const res = await fetch(`/api/communities/${selectedCommunity._id}/messages`, {
+      // Debug log before sending
+      console.log('Attempting to send message:', {
+        communityId: selectedCommunity._id,
+        text: newMessage,
+        sender: session?.user?.id
+      });
+  
+      const response = await fetch(`/api/communities/${selectedCommunity._id}/messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ text: newMessage }),
+        body: JSON.stringify({
+          text: newMessage,
+          senderId: session?.user?.id, // Explicit sender ID
+          communityId: selectedCommunity._id // Explicit community ID
+        }),
       });
-      
-      if (!res.ok) {
-        throw new Error('Failed to send message');
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('Failed to send message:', errorData);
+        alert(errorData.message || 'Failed to send message');
+        return;
       }
+  
+      const sentMessage = await response.json();
+      console.log('Message sent successfully:', sentMessage);
+  
+      // Update local state optimistically
+      setMessages(prev => [...prev, {
+        ...sentMessage,
+        sender: { _id: session?.user?.id, name: session?.user?.name }
+      }]);
       
-      const sentMessage = await res.json();
-      setMessages(prev => [...prev, sentMessage]);
-      setNewMessage('');
-      
+      setNewMessage(''); // Clear input field
+  
+      // Scroll to bottom
       setTimeout(() => {
         const chatContainer = document.getElementById('chat-messages');
         if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
       }, 100);
+  
     } catch (error) {
       console.error('Error sending message:', error);
+      alert('Failed to send message. Please try again.');
     }
   };
 
+  
   const handleJoinCommunity = async (communityId) => {
+    setIsJoining(true);
     try {
+      console.log('Joining community:', communityId, 'User ID:', session?.user?.id);
+      
       const res = await fetch(`/api/communities/${communityId}/members`, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: session?.user?.id }), // Explicitly send user ID
       });
       
       if (!res.ok) {
-        throw new Error(await res.text());
+        const errorData = await res.json();
+        console.error('Join failed:', errorData);
+        throw new Error(errorData.message || 'Failed to join community');
       }
+  
+      const updatedCommunity = await res.json(); // Assume backend returns updated community
       
-      // Refresh communities list
-      const updated = await fetch('/api/communities').then(res => res.json());
-      setCommunities(updated);
+      console.log('Updated community data:', updatedCommunity);
       
-      // If this was the selected community, refresh messages
-      if (selectedCommunity?._id === communityId) {
-        const updatedMessages = await fetch(`/api/communities/${communityId}/messages`).then(res => res.json());
-        setMessages(updatedMessages);
-      }
+      // Update all relevant states
+      setSelectedCommunity(updatedCommunity);
+      setCommunities(prev => 
+        prev.map(community => 
+          community._id === communityId ? updatedCommunity : community
+        )
+      );
+      
+      // Refresh messages
+      const messagesRes = await fetch(`/api/communities/${communityId}/messages`);
+      const updatedMessages = await messagesRes.json();
+      setMessages(updatedMessages);
+      
+      console.log('Post-join verification - is member now?', 
+        updatedCommunity.members.includes(session?.user?.id));
+      
     } catch (error) {
       console.error('Error joining community:', error);
       alert(error.message);
+    } finally {
+      setIsJoining(false);
     }
   };
 
@@ -244,8 +322,12 @@ export default function CommunitiesPage() {
   };
 
   const filteredCommunities = communities.filter(community => {
-    const matchesSearch = community.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         community.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const name = community.name || '';
+    const description = community.description || '';
+    const searchTermLower = searchTerm.toLowerCase();
+    
+    const matchesSearch = name.toLowerCase().includes(searchTermLower) || 
+                         description.toLowerCase().includes(searchTermLower);
     const matchesType = communityTypeFilter === 'all' || community.type === communityTypeFilter;
     return matchesSearch && matchesType;
   });
@@ -385,7 +467,7 @@ export default function CommunitiesPage() {
                     </span>
                   </div>
                   <div className='mt-3 flex gap-2'>
-                    {selectedCommunity.members?.includes(session?.user?.id) ? (
+                  {checkMembership(selectedCommunity) ? (
                       <button
                         onClick={() => handleLeaveCommunity(selectedCommunity._id)}
                         className='px-3 py-1 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg text-sm hover:bg-red-200 dark:hover:bg-red-800 transition'
@@ -395,16 +477,19 @@ export default function CommunitiesPage() {
                     ) : (
                       <button
                         onClick={() => handleJoinCommunity(selectedCommunity._id)}
-                        className='px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm hover:bg-green-200 dark:hover:bg-green-800 transition'
+                        disabled={isJoining}
+                        className={`px-3 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded-lg text-sm hover:bg-green-200 dark:hover:bg-green-800 transition ${
+                          isJoining ? 'opacity-50 cursor-not-allowed' : ''
+                        }`}
                       >
-                        Join Community
+                        {isJoining ? 'Joining...' : 'Join Community'}
                       </button>
                     )}
                   </div>
                 </div>
 
                 <div id='chat-messages' className='flex-1 overflow-y-auto space-y-4 mb-4'>
-                  {messages.map((msg) => (
+                   {Array.isArray(messages) && messages.map((msg) => (
                     <div 
                       key={msg._id} 
                       className={`flex gap-3 ${
@@ -444,30 +529,31 @@ export default function CommunitiesPage() {
                   ))}
                 </div>
 
-                {selectedCommunity.members?.includes(session?.user?.id) ? (
-                  <form onSubmit={handleSendMessage} className='mt-auto'>
-                    <div className='flex gap-2'>
-                      <input
-                        type='text'
-                        placeholder='Type a message...'
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        className='flex-1 p-3 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500'
-                      />
-                      <button 
-                        type='submit' 
-                        className='bg-purple-700 hover:bg-purple-800 p-3 text-white rounded-lg transition duration-300'
-                        disabled={!newMessage.trim()}
-                      >
-                        Send
-                      </button>
-                    </div>
-                  </form>
-                ) : (
-                  <div className='mt-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center'>
-                    Join this community to participate in the conversation
-                  </div>
-                )}
+                {checkMembership(selectedCommunity) ? (
+  <form onSubmit={handleSendMessage} className='mt-auto'>
+    <div className='flex gap-2'>
+      <input
+        type='text'
+        placeholder='Type a message...'
+        value={newMessage}
+        onChange={(e) => setNewMessage(e.target.value)}
+        className='flex-1 p-3 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500'
+      />
+      <button 
+        type='submit' 
+        className='bg-purple-700 hover:bg-purple-800 p-3 text-white rounded-lg transition duration-300'
+        disabled={!newMessage.trim()}
+      >
+        Send
+      </button>
+    </div>
+  </form>
+) : (
+  <div className='mt-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center'>
+    {console.log('Rendering join prompt - Current user:', session?.user?.id, 'Members:', selectedCommunity?.members)}
+    Join this community to participate in the conversation
+  </div>
+)}
               </div>
             ) : (
               <div className='flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400'>
@@ -538,6 +624,9 @@ export default function CommunitiesPage() {
                     {selectedCommunity.rules?.map((rule, index) => (
                       <li key={index}>{rule}</li>
                     ))}
+                    {(!selectedCommunity.rules || selectedCommunity.rules.length === 0) && (
+                      <li className='text-gray-500'>No specific rules set for this community</li>
+                    )}
                   </ul>
                 </div>
 

@@ -35,7 +35,8 @@ const courseSchema = new mongoose.Schema(
       },
     ],
 
-   
+    // ✅ Move enrolledUsers here
+    enrolledUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }]
   },
   {
     timestamps: true,

@@ -1,5 +1,4 @@
 
-
 //app\courses\[id]\page.js
 "use client";
 import React, { useState, useEffect } from "react";
@@ -9,6 +8,13 @@ import { Nav } from "@/Home/Navbar/Nav";
 import { FaStar, FaFilePdf, FaFilePowerpoint, FaFileVideo, FaLock } from "react-icons/fa";
 import { FaUserGroup, FaArrowLeft } from "react-icons/fa6";
 import { useSession } from "next-auth/react";
+import Link from "next/link"; 
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 const CourseDetailsPage = () => {
   const { id } = useParams();
@@ -22,6 +28,18 @@ const CourseDetailsPage = () => {
   const [enrollmentError, setEnrollmentError] = useState(null);
   const [isEnrolled, setIsEnrolled] = useState(false);
   const [showStudentsModal, setShowStudentsModal] = useState(false);
+  const [zoom, setZoom] = useState(1);
+  const [numPages, setNumPages] = useState(null);
+
+  function onDocumentLoadSuccess({ numPages }) {
+    setNumPages(numPages);
+  } 
+  // Add this function inside your component
+const calculateTotalLessons = () => {
+  const slidesCount = slides.length;
+  const videosCount = videos.length;
+  return slidesCount + videosCount;
+}; 
 
   const checkEnrollment = async () => {
     if (!session?.user?.id) return false;
@@ -192,14 +210,14 @@ const handleUnenroll = async () => {
     );
   }
 
-  // Filter files based on type
-  const slides = course?.slidesVideoFiles?.filter(file => 
-    file.type === 'pdf' || file.type === 'photo'
+const slides = course?.slidesVideoFiles?.filter(file => 
+    file.type === 'pdf' || file.type === 'photo' || file.type === 'document'
   ) || [];
 
   const videos = course?.slidesVideoFiles?.filter(file => 
-    file.type === 'video'
+    file.type === 'video' || file.type === 'mp4' || file.type === 'mov'
   ) || [];
+
 
   return (
     <div>
@@ -328,6 +346,7 @@ const handleUnenroll = async () => {
     )}
   </>
 ) : (
+  
   <div className="flex flex-col gap-2">
     <div className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-center">
       You're enrolled!
@@ -346,84 +365,107 @@ const handleUnenroll = async () => {
               </div>
               
               <div className="flex items-center text-gray-700 dark:text-gray-300">
-                <span className="font-semibold mr-2">Lessons:</span>
-                <span>{course.lessons || 0}</span>
-              </div>
+  <span className="font-semibold mr-2">Lessons:</span>
+  <span>{calculateTotalLessons()}</span>
+</div>
+
             </div>
           </div>
-
-          {/* Course Content */}
-          <div className="mb-12">
-            <div className="flex border-b border-gray-200 dark:border-gray-700 mb-8">
-              <button
-                className={`py-3 px-6 font-medium ${activeTab === "slides" ? "text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}
-                onClick={() => setActiveTab("slides")}
+{/* Edit Button (only shown to course owner) */}
+{session?.user?.id === course.author._id.toString() && (
+  <div className="flex justify-end mb-4">
+    <Link 
+      href={`/courses/${id}/edit`}
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+    >
+      Edit Course
+    </Link>
+  </div>
+)}
+           {/* Course Content */}
+      <div className="mb-12">
+        <div className="flex border-b border-gray-200 dark:border-gray-700 mb-8">
+          <button
+            className={`py-3 px-6 font-medium ${activeTab === "slides" ? "text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}
+            onClick={() => setActiveTab("slides")}
+          >
+            Slides & Photos ({slides.length})
+          </button>
+          <button
+            className={`py-3 px-6 font-medium ${activeTab === "videos" ? "text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}
+            onClick={() => setActiveTab("videos")}
+          >
+            Videos ({videos.length})
+          </button>
+        </div>
+        
+        {!isEnrolled ? (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
+            <div className="flex flex-col items-center justify-center">
+              <FaLock className="w-16 h-16 text-purple-600 dark:text-purple-400 mb-4" />
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                Content Locked
+              </h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
+                Enroll in this course to access all slides, videos, and materials
+              </p>
+              <button 
+                onClick={handleEnroll}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg"
               >
-                Slides & Photos ({slides.length})
-              </button>
-              <button
-                className={`py-3 px-6 font-medium ${activeTab === "videos" ? "text-purple-600 dark:text-purple-400 border-b-2 border-purple-600 dark:border-purple-400" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}
-                onClick={() => setActiveTab("videos")}
-              >
-                Videos ({videos.length})
+                Enroll Now
               </button>
             </div>
-            
-            {!isEnrolled ? (
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md p-8 text-center">
-                <div className="flex flex-col items-center justify-center">
-                  <FaLock className="w-16 h-16 text-purple-600 dark:text-purple-400 mb-4" />
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                    Content Locked
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-300 mb-6">
-                    Enroll in this course to access all slides, videos, and materials
-                  </p>
-                  <button 
-                    onClick={handleEnroll}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-6 rounded-lg"
-                  >
-                    Enroll Now
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                {activeTab === "slides" && (
-                  <div>
-                    {slides.length > 0 ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {slides.map((file, index) => (
-                          <div 
-                            key={index} 
-                            className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 cursor-pointer"
-                            onClick={() => setCurrentFileIndex(index)}
-                          >
-                            <div className="p-4 flex items-center justify-center bg-gray-100 dark:bg-gray-700 h-48">
-                              {file.type === 'pdf' ? (
-                                <FaFilePdf className="w-16 h-16 text-red-500" />
-                              ) : (
-                                <img 
-                                  src={file.url} 
-                                  alt="Course content" 
-                                  className="w-full h-full object-contain"
-                                />
-                              )}
+          </div>
+        ) : (
+          <>
+            {activeTab === "slides" && (
+              <div>
+                {slides.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {slides.map((file, index) => (
+                      <div 
+                        key={index} 
+                        className="bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden hover:shadow-lg transition duration-300 cursor-pointer"
+                        onClick={() => setCurrentFileIndex(index)}
+                      >
+                        <div className="p-4 flex items-center justify-center bg-gray-100 dark:bg-gray-700 h-48">
+                          {file.type === 'pdf' ? (
+                            <div className="text-center">
+                              <FaFilePdf className="w-16 h-16 text-red-500 mx-auto mb-2" />
+                              <p className="text-sm text-gray-700 dark:text-gray-300">PDF Document</p>
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setCurrentFileIndex(index);
+                                }}
+                                className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                              >
+                                Open PDF
+                              </button>
                             </div>
-                            <div className="p-4">
-                              <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                                {file.type === 'pdf' ? 'PDF Document' : 'Photo'}
-                              </h3>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{file.type}</p>
-                            </div>
-                          </div>
-                        ))}
+                          ) : (
+                            <img 
+                              src={file.url} 
+                              alt="Course content" 
+                              className="w-full h-full object-contain"
+                            />
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                            {file.name || (file.type === 'pdf' ? 'PDF Document' : 'Photo')}
+                          </h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400 capitalize">{file.type}</p>
+                        </div>
                       </div>
-                    ) : (
-                      <p className="text-gray-500 dark:text-gray-400 text-center py-12">No slides or photos available</p>
-                    )}
+                    ))}
                   </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-12">No slides or photos available</p>
                 )}
+              </div>
+            )}
                 
                 {activeTab === "videos" && (
                   <div>
@@ -454,64 +496,205 @@ const handleUnenroll = async () => {
               </>
             )}
           </div>
-
-          {/* File Viewer Modal */}
-          {isEnrolled && currentFileIndex !== null && activeTab === "slides" && (
-            <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
-              <div className="bg-white dark:bg-gray-800 rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
-                <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
-                  <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    {slides[currentFileIndex].type === 'pdf' ? 'PDF Document' : 'Photo'}
-                  </h3>
-                  <button 
-                    onClick={() => setCurrentFileIndex(null)}
-                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-                  >
-                    ✕
-                  </button>
-                </div>
-                
-                <div className="flex-1 overflow-auto p-4 flex items-center justify-center">
-                  {slides[currentFileIndex].type === 'pdf' ? (
-                    <iframe 
-                      src={slides[currentFileIndex].url}
-                      className="w-full h-full min-h-[70vh]"
-                      frameBorder="0"
-                    />
-                  ) : (
-                    <img 
-                      src={slides[currentFileIndex].url} 
-                      alt="Course content" 
-                      className="max-w-full max-h-[70vh] object-contain"
-                    />
-                  )}
-                </div>
-                
-                <div className="flex justify-between items-center p-4 border-t border-gray-200 dark:border-gray-700">
-                  <button
-                    onClick={() => setCurrentFileIndex(prev => (prev > 0 ? prev - 1 : slides.length - 1))}
-                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-                    disabled={slides.length <= 1}
-                  >
-                    Previous
-                  </button>
-                  
-                  <span className="text-gray-700 dark:text-gray-300">
-                    {currentFileIndex + 1} of {slides.length}
-                  </span>
-                  
-                  <button
-                    onClick={() => setCurrentFileIndex(prev => (prev < slides.length - 1 ? prev + 1 : 0))}
-                    className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
-                    disabled={slides.length <= 1}
-                  >
-                    Next
-                  </button>
-                </div>
+ {/* PDF Viewer Modal */}
+      {isEnrolled && currentFileIndex !== null && activeTab === "slides" && slides[currentFileIndex]?.type === 'pdf' && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                {slides[currentFileIndex].name || 'PDF Document'}
+              </h3>
+              <div className="flex gap-2">
+                <a 
+                  href={slides[currentFileIndex].url}
+                  download
+                  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm flex items-center gap-1"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  Download
+                </a>
+                <button 
+                  onClick={() => setCurrentFileIndex(null)}
+                  className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+                >
+                  ✕
+                </button>
               </div>
             </div>
-          )}
+            
+            <div className="flex-1 overflow-auto p-4">
+              <div className="w-full h-full overflow-auto">
+                <Document
+                  file={slides[currentFileIndex].url}
+                  onLoadSuccess={onDocumentLoadSuccess}
+                  loading={<div className="text-center py-8">Loading PDF...</div>}
+                  error={<div className="text-center py-8 text-red-500">Failed to load PDF</div>}
+                  className="pdf-viewer"
+                >
+                  {Array.from(new Array(numPages), (el, index) => (
+                    <Page 
+                      key={`page_${index + 1}`} 
+                      pageNumber={index + 1} 
+                      width={800}
+                      className="mb-4"
+                      renderTextLayer={false}
+                      renderAnnotationLayer={false}
+                    />
+                  ))}
+                </Document>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center p-4 border-t border-gray-200 dark:border-gray-700">
+              <button
+                onClick={() => setCurrentFileIndex(prev => (prev > 0 ? prev - 1 : slides.length - 1))}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                disabled={slides.length <= 1}
+              >
+                Previous
+              </button>
+              
+              <span className="text-gray-700 dark:text-gray-300">
+                {currentFileIndex + 1} of {slides.length}
+              </span>
+              
+              <button
+                onClick={() => setCurrentFileIndex(prev => (prev < slides.length - 1 ? prev + 1 : 0))}
+                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+                disabled={slides.length <= 1}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+          {/* File Viewer Modal */}
+      {isEnrolled && currentFileIndex !== null && activeTab === "slides" && (
+  <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+      <div className="flex justify-between items-center p-4 border-b border-gray-200 dark:border-gray-700">
+        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+          {slides[currentFileIndex].type === 'pdf' ? 'PDF Document' : 
+           slides[currentFileIndex].type === 'video' ? 'Video' : 'Photo'}
+        </h3>
+        <div className="flex gap-2">
+          <a 
+            href={slides[currentFileIndex].url}
+            download
+            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm flex items-center gap-1"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            </svg>
+            Download
+          </a>
+          <button 
+            onClick={() => setCurrentFileIndex(null)}
+            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+      
+      <div className="flex-1 overflow-auto p-4 flex items-center justify-center relative">
+        {/* Zoom controls */}
+        <div className="absolute top-4 right-4 z-10 flex flex-col gap-2 bg-white dark:bg-gray-700 p-2 rounded-lg shadow-lg">
+          <button 
+            onClick={() => setZoom(prev => Math.min(prev + 0.1, 3))}
+            className="p-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
+          <button 
+            onClick={() => setZoom(prev => Math.max(prev - 0.1, 0.5))}
+            className="p-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+            </svg>
+          </button>
+          <button 
+            onClick={() => setZoom(1)}
+            className="p-1 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500 text-xs"
+          >
+            Reset
+          </button>
+        </div>
 
+        {slides[currentFileIndex].type === 'pdf' ? (
+          <div className="w-full h-full overflow-auto">
+            <Document
+              file={slides[currentFileIndex].url}
+              onLoadSuccess={onDocumentLoadSuccess}
+              loading={<div className="text-center py-8">Loading PDF...</div>}
+              error={<div className="text-center py-8 text-red-500">Failed to load PDF</div>}
+              className="pdf-viewer"
+            >
+              {Array.from(new Array(numPages), (el, index) => (
+                <Page 
+                  key={`page_${index + 1}`} 
+                  pageNumber={index + 1} 
+                  width={800 * zoom}
+                  className="mb-4"
+                  renderTextLayer={false}
+                  renderAnnotationLayer={false}
+                />
+              ))}
+            </Document>
+          </div>
+        ) : slides[currentFileIndex].type === 'video' ? (
+          <div className="w-full max-w-4xl">
+            <video
+              controls
+              className="w-full"
+              style={{ transform: `scale(${zoom})` }}
+            >
+              <source src={slides[currentFileIndex].url} type={`video/${slides[currentFileIndex].url.split('.').pop()}`} />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        ) : (
+          <div className="overflow-auto max-w-full max-h-[70vh]">
+            <img 
+              src={slides[currentFileIndex].url} 
+              alt="Course content" 
+              className="object-contain"
+              style={{ transform: `scale(${zoom})` }}
+            />
+          </div>
+        )}
+      </div>
+      
+      <div className="flex justify-between items-center p-4 border-t border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setCurrentFileIndex(prev => (prev > 0 ? prev - 1 : slides.length - 1))}
+          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+          disabled={slides.length <= 1}
+        >
+          Previous
+        </button>
+        
+        <span className="text-gray-700 dark:text-gray-300">
+          {currentFileIndex + 1} of {slides.length}
+        </span>
+        
+        <button
+          onClick={() => setCurrentFileIndex(prev => (prev < slides.length - 1 ? prev + 1 : 0))}
+          className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300 dark:hover:bg-gray-600"
+          disabled={slides.length <= 1}
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  </div>
+)}
 {/* Students Modal */}
 {showStudentsModal && (
   <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4">
