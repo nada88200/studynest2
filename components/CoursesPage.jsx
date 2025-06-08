@@ -90,7 +90,7 @@ const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe, onClick })
             </div>
             <div className="flex items-center space-x-2">
               <FaUserGroup className="w-4 h-4 text-orange-600" />
-              <p className="text-base font-semibold text-gray-800">{course.students || 0} Students</p>
+              <p className="text-base font-semibold text-gray-800">{course.students.length || 0} Students</p>
             </div>
           </div>
 

@@ -1,11 +1,13 @@
+// app/api/communities/[id]/invite/route.js
 import { getServerSession } from 'next-auth/next';
 import { authOptions } from "@/app/api/auth/[...nextauth]/authOptions";
 import Community from '@/models/Community';
 import User from '@/models/user';
+import Notification from '@/models/Notification';
+import { Types } from 'mongoose';
 import connectMongoDB from "@/lib/mongodb";
 import { NextResponse } from 'next/server';
 
-// Invite a user to a private community
 export async function POST(request, { params }) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -14,20 +16,32 @@ export async function POST(request, { params }) {
 
   try {
     await connectMongoDB();
-    const { userId } = await request.json();
-    const community = await Community.findById(params.id);
+    const { email } = await request.json();
+    const communityId = params.id;
+
+    // Validate email
+    if (!email || !email.includes('@')) {
+      return NextResponse.json({ error: 'Valid email required' }, { status: 400 });
+    }
+
+    // Find community with proper population
+    const community = await Community.findById(communityId)
+      .populate('creator', '_id')
+      .populate('members', '_id');
 
     if (!community) {
       return NextResponse.json({ error: 'Community not found' }, { status: 404 });
     }
 
-    // Check if user is creator or moderator
-    const isCreator = community.creator.toString() === session.user.id;
-    const isModerator = community.moderators.some(m => m.toString() === session.user.id);
+    // Check permissions safely
+    const isCreator = community.creator?._id?.toString() === session.user.id;
+    const isModerator = community.moderators?.some(mod => 
+      mod?.toString() === session.user.id
+    ) || false;
     
     if (!isCreator && !isModerator) {
       return NextResponse.json(
-        { error: 'Not authorized to invite to this community' },
+        { error: 'Only owners and moderators can invite' },
         { status: 403 }
       );
     }
@@ -40,45 +54,83 @@ export async function POST(request, { params }) {
       );
     }
 
-    const userToInvite = await User.findById(userId);
+    // Find user to invite
+    const userToInvite = await User.findOne({ email }).select('_id');
     if (!userToInvite) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    // Check if user is already a member
-    if (community.members.includes(userId)) {
+    // Check membership safely
+    const isMember = community.members?.some(member => 
+      member?._id?.toString() === userToInvite._id.toString()
+    ) || false;
+
+    if (isMember) {
       return NextResponse.json(
-        { error: 'User is already a member of this community' },
+        { error: 'User is already a member' },
         { status: 400 }
       );
     }
 
-    // Check if user already has an invite
-    const existingInvite = userToInvite.communityInvites.find(
-      invite => invite.community.toString() === params.id
+    // Initialize pendingInvites if needed
+    if (!community.pendingInvites) {
+      community.pendingInvites = [];
+    }
+
+    // Check for existing invite safely
+    const existingInvite = community.pendingInvites.find(invite => 
+      invite?.user?.toString() === userToInvite._id.toString() && 
+      invite?.status === 'pending'
     );
 
     if (existingInvite) {
       return NextResponse.json(
-        { error: 'User already has an invite to this community' },
+        { error: 'User already has a pending invite' },
         { status: 400 }
       );
     }
 
-    // Add invite to user
-    userToInvite.communityInvites.push({
-      community: community._id,
-      inviter: session.user.id,
-      status: 'pending'
+    // Create new invite
+    const newInvite = {
+        user: userToInvite._id,
+        invitedBy: session.user.id,
+        status: 'pending',
+        createdAt: new Date()
+      };
+      
+      community.pendingInvites.push(newInvite);
+      await community.save();
+
+      const savedCommunity = await Community.findById(community._id);
+const createdInvite = savedCommunity.pendingInvites.find(
+  inv => inv.user.toString() === userToInvite._id.toString() && 
+        inv.status === 'pending'
+);
+      
+      // Create notification with inviteId in metadata
+      const notification = new Notification({
+        recipientId: userToInvite._id,
+        senderId: session.user.id,
+        type: 'community_invite',
+        message: `You've been invited to join "${community.name}"`,
+        metadata: {
+          communityId: community._id.toString(),
+          inviteId: createdInvite._id.toString(),
+          inviterId: session.user.id
+        }
+      });
+      await notification.save();
+
+    return NextResponse.json({ 
+      success: true,
+      message: 'Invitation sent successfully',
+      inviteId: newInvite._id
     });
 
-    await userToInvite.save();
-
-    return NextResponse.json({ message: 'Invite sent successfully' });
   } catch (error) {
     console.error('Error sending invite:', error);
     return NextResponse.json(
-      { error: 'Failed to send invite' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }

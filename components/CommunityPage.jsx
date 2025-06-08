@@ -1,3 +1,4 @@
+//components/CommunityPage.jsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -73,12 +74,23 @@ export default function CommunitiesPage() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isJoining, setIsJoining] = useState(false);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
 
-const checkMembership = (community) => {
-  return community?.members?.some(member => 
-    typeof member === 'object' ? member._id === session?.user?.id : member === session?.user?.id
-  );
-};
+
+
+
+  const checkMembership = (community) => {
+    if (!community?.members) return false;
+    
+   
+    const userId = session?.user?.id?.toString();
+    return community.members.some(member => 
+      (member?._id?.toString() === userId || 
+       member?.toString() === userId)
+    );
+  };
+  
 
   useEffect(() => {
     const fetchCommunities = async () => {
@@ -174,6 +186,36 @@ const checkMembership = (community) => {
     } catch (error) {
       console.error('Error creating community:', error);
       alert('Failed to create community');
+    }
+  };
+
+
+  const handleSendInvite = async () => {
+    if (!inviteEmail.trim()) {
+      alert('Please enter a valid email');
+      return;
+    }
+  
+    try {
+      const res = await fetch(`/api/communities/${selectedCommunity._id}/invite`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email: inviteEmail }),
+      });
+  
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to send invitation');
+      }
+  
+      alert('Invitation sent successfully!');
+      setIsInviteModalOpen(false);
+      setInviteEmail('');
+    } catch (error) {
+      console.error('Error sending invite:', error);
+      alert(error.message);
     }
   };
 
@@ -486,6 +528,67 @@ const checkMembership = (community) => {
                       </button>
                     )}
                   </div>
+                  {selectedCommunity?.type === 'private' && checkMembership(selectedCommunity) && (
+  <button
+    onClick={() => setIsInviteModalOpen(true)}
+    className="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition mt-3"
+  >
+    Invite Members
+  </button>
+)}
+
+{isInviteModalOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+      <div className="flex justify-between items-center border-b dark:border-gray-700 p-4">
+        <h3 className="text-lg font-bold">Invite to Community</h3>
+        <button 
+          onClick={() => {
+            setIsInviteModalOpen(false);
+            setInviteEmail('');
+          }}
+          className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+        >
+          <FaTimes />
+        </button>
+      </div>
+      
+      <div className="p-4 space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Email Address</label>
+          <input
+            type="email"
+            value={inviteEmail}
+            onChange={(e) => setInviteEmail(e.target.value)}
+            className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+            placeholder="Enter user's email"
+            required
+          />
+        </div>
+        
+        <div className="pt-4 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setIsInviteModalOpen(false);
+              setInviteEmail('');
+            }}
+            className="px-4 py-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSendInvite}
+            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+          >
+            Send Invite
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
+
                 </div>
 
                 <div id='chat-messages' className='flex-1 overflow-y-auto space-y-4 mb-4'>
