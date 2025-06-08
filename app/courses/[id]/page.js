@@ -30,7 +30,64 @@ const CourseDetailsPage = () => {
   const [showStudentsModal, setShowStudentsModal] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [numPages, setNumPages] = useState(null);
+// Add these states
+const [userRating, setUserRating] = useState(0);
+const [hoverRating, setHoverRating] = useState(0);
+const [isRatingLoading, setIsRatingLoading] = useState(false);
+const [ratingSuccess, setRatingSuccess] = useState(null);
 
+
+// Add this effect to check if user already rated
+useEffect(() => {
+  if (course?.ratings && session?.user?.id) {
+    const userRatingObj = course.ratings.find(r => 
+      r.user.toString() === session.user.id
+    );
+    setUserRating(userRatingObj?.rating || 0);
+  }
+}, [course, session]);
+
+// Add this function to handle rating
+const handleRateCourse = async (rating) => {
+  if (!isEnrolled || isRatingLoading) return;
+  
+  setIsRatingLoading(true);
+    setRatingSuccess(null); // Reset any previous success message
+
+  try {
+    const response = await fetch(`/api/courses/${id}/rating`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ rating }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      throw new Error(data.error || 'Failed to submit rating');
+    }
+
+    // Show success message
+    setRatingSuccess(`You rated this course ${rating} star${rating !== 1 ? 's' : ''}!`);
+    
+    // Refresh course data
+    const refreshResponse = await fetch(`/api/courses/${id}`);
+    if (refreshResponse.ok) {
+      const newData = await refreshResponse.json();
+      setCourse(newData.course);
+    }
+    // Clear success message after 3 seconds
+    setTimeout(() => {
+      setRatingSuccess(null);
+    }, 3000);
+  } catch (err) {
+    console.error('Rating error:', err);
+    alert(`Error: ${err.message}`);
+  } finally {
+    setIsRatingLoading(false);
+  }
+};
   function onDocumentLoadSuccess({ numPages }) {
     setNumPages(numPages);
   } 
@@ -246,13 +303,119 @@ const slides = course?.slidesVideoFiles?.filter(file =>
             <div className="w-full lg:w-1/2">
               <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">{course.title}</h1>
               <div className="flex items-center mb-6">
-                <div className="flex items-center mr-6">
+                {/* <div className="flex items-center mr-6">
                   {Array(5).fill(0).map((_, i) => (
                     <FaStar key={i} className="w-5 h-5 text-yellow-500" />
                   ))}
                   <span className="ml-2 text-gray-700 dark:text-gray-300">({course.reviewNumber || 0})</span>
-                </div>
-                
+                </div> */}
+
+                <div className="flex items-center mr-6">
+  {Array(5).fill(0).map((_, i) => {
+    const ratingValue = i + 1;
+    const averageRating = course.averageRating || 0;
+    
+    return (
+      <button
+        key={i}
+        type="button"
+        className={`w-5 h-5 ${
+          // Show yellow if:
+          // - It's being hovered (and not loading)
+          // - OR user has rated this value (and not hovering something else)
+          // - OR it's below the average rating (when not hovering)
+          (hoverRating >= ratingValue || 
+          (!hoverRating && userRating >= ratingValue) ||
+          (!hoverRating && averageRating >= ratingValue))
+          ? 'text-yellow-500' 
+          : 'text-gray-300'
+        } ${isRatingLoading ? 'opacity-50' : ''}`}
+        onClick={() => handleRateCourse(ratingValue)}
+        onMouseEnter={() => isEnrolled && !isRatingLoading && setHoverRating(ratingValue)}
+        onMouseLeave={() => isEnrolled && !isRatingLoading && setHoverRating(0)}
+        disabled={!isEnrolled || isRatingLoading}
+        title={isEnrolled ? `Rate ${ratingValue} star${ratingValue !== 1 ? 's' : ''}` : 'Enroll to rate'}
+      >
+        <FaStar />
+      </button>
+    );
+  })}
+  <span className="ml-2 text-gray-700 dark:text-gray-300">
+    ({course.reviewNumber || 0} {course.reviewNumber === 1 ? 'review' : 'reviews'})
+  </span>
+  {isRatingLoading && (
+    <span className="ml-2 text-sm text-gray-500">Saving...</span>
+  )}
+  {ratingSuccess && (
+    <span className="ml-2 text-sm text-green-600 dark:text-green-400">
+      {ratingSuccess}
+    </span>
+  )}
+</div>
+               {/* <div className="flex items-center mr-6">
+  {Array(5).fill(0).map((_, i) => {
+    const ratingValue = i + 1;
+    return (
+      <button
+        key={i}
+        type="button"
+        className={`w-5 h-5 ${
+          // Show yellow if:
+          // - It's being hovered (and not loading)
+          // - OR user has rated this value (and not hovering something else)
+          // - OR it's below the user's rating (when not hovering)
+          (hoverRating >= ratingValue || 
+          (!hoverRating && userRating >= ratingValue))
+          ? 'text-yellow-500' 
+          : 'text-gray-300'
+        } ${isRatingLoading ? 'opacity-50' : ''}`}
+        onClick={() => handleRateCourse(ratingValue)}
+        onMouseEnter={() => isEnrolled && !isRatingLoading && setHoverRating(ratingValue)}
+        onMouseLeave={() => isEnrolled && !isRatingLoading && setHoverRating(0)}
+        disabled={!isEnrolled || isRatingLoading}
+        title={isEnrolled ? `Rate ${ratingValue} star${ratingValue !== 1 ? 's' : ''}` : 'Enroll to rate'}
+      >
+        <FaStar />
+      </button>
+    );
+  })}
+  <span className="ml-2 text-gray-700 dark:text-gray-300">
+    ({course.reviewNumber || 0} {course.reviewNumber === 1 ? 'review' : 'reviews'})
+  </span>
+  {isRatingLoading && (
+    <span className="ml-2 text-sm text-gray-500">Saving...</span>
+  )}
+  {ratingSuccess && (
+    <span className="ml-2 text-sm text-green-600 dark:text-green-400">
+      {ratingSuccess}
+    </span>
+  )}
+</div> */}
+{/* <div className="flex items-center mr-6">
+  {Array(5).fill(0).map((_, i) => {
+    const ratingValue = i + 1;
+    return (
+      <button
+        key={i}
+        type="button"
+        className={`w-5 h-5 ${(hoverRating || userRating || course.averageRating || 0) >= ratingValue ? 'text-yellow-500' : 'text-gray-300'} ${isRatingLoading ? 'opacity-50' : ''}`}
+        onClick={() => handleRateCourse(ratingValue)}
+        onMouseEnter={() => isEnrolled && !isRatingLoading && setHoverRating(ratingValue)}
+        onMouseLeave={() => isEnrolled && !isRatingLoading && setHoverRating(0)}
+        disabled={!isEnrolled || isRatingLoading}
+        title={isEnrolled ? `Rate ${ratingValue} star${ratingValue !== 1 ? 's' : ''}` : 'Enroll to rate'}
+      >
+        <FaStar />
+      </button>
+    );
+  })}
+  <span className="ml-2 text-gray-700 dark:text-gray-300">
+    ({course.reviewNumber || 0} {course.reviewNumber === 1 ? 'review' : 'reviews'})
+  </span>
+  {isRatingLoading && (
+    <span className="ml-2 text-sm text-gray-500">Saving...</span>
+  )}
+</div> */}
                 <div 
                   className="flex items-center cursor-pointer hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
                   onClick={() => setShowStudentsModal(true)}
@@ -328,40 +491,52 @@ const slides = course?.slidesVideoFiles?.filter(file =>
       </div>
     </div>
   </div>
-)}{!isEnrolled ? (
-  <>
-    <button 
-      onClick={handleEnroll}
-      disabled={isEnrolling}
-      className={`w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ${
-        isEnrolling ? 'opacity-70 cursor-not-allowed' : ''
-      }`}
-    >
-      {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
-    </button>
-    {enrollmentError && (
-      <p className="mt-2 text-sm text-red-600 dark:text-red-400">
-        {enrollmentError}
-      </p>
-    )}
-  </>
-) : (
-  
+)}{/* Replace the existing enrollment button section with this */}
+{session?.user?.id !== course.author._id.toString() && (
   <div className="flex flex-col gap-2">
-    <div className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-center">
-      You're enrolled!
-    </div>
-    <button
-      onClick={handleUnenroll}
-      disabled={isEnrolling}
-      className={`w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ${
-        isEnrolling ? 'opacity-70 cursor-not-allowed' : ''
-      }`}
-    >
-      {isEnrolling ? 'Processing...' : 'Unenroll'}
-    </button>
+    {!isEnrolled ? (
+      <>
+        <button 
+          onClick={handleEnroll}
+          disabled={isEnrolling}
+          className={`w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ${
+            isEnrolling ? 'opacity-70 cursor-not-allowed' : ''
+          }`}
+        >
+          {isEnrolling ? 'Enrolling...' : 'Enroll Now'}
+        </button>
+        {enrollmentError && (
+          <p className="mt-2 text-sm text-red-600 dark:text-red-400">
+            {enrollmentError}
+          </p>
+        )}
+      </>
+    ) : (
+      <div className="flex flex-col gap-2">
+        <div className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-center">
+          You're enrolled!
+        </div>
+        <button
+          onClick={handleUnenroll}
+          disabled={isEnrolling}
+          className={`w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-4 rounded-lg transition duration-300 ${
+            isEnrolling ? 'opacity-70 cursor-not-allowed' : ''
+          }`}
+        >
+          {isEnrolling ? 'Processing...' : 'Unenroll'}
+        </button>
+      </div>
+    )
+    }
+    
   </div>
 )}
+{/* Owner message (only shown to course owner) */}
+  {session?.user?.id === course.author._id.toString() && (
+    <div className="w-full bg-green-600 text-white font-bold py-3 px-4 rounded-lg text-center">
+      This is your course
+    </div>
+  )}
               </div>
               
               <div className="flex items-center text-gray-700 dark:text-gray-300">

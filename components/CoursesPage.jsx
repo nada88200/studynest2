@@ -9,7 +9,7 @@ import { FaStar, FaFile } from "react-icons/fa";
 import { FaUserGroup } from "react-icons/fa6";
 import { useSession } from "next-auth/react";
 
-const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe, onClick }) => {
+const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe, onClick ,isEnrolled = false  }) => {
   const { data: session } = useSession();
 
   // Debug logs to help identify the issue
@@ -36,9 +36,15 @@ const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe, onClick })
 
   console.log('Delete button should show:', showDeleteButton);
 
+  
   return (
     <Tilt>
       <div className="bg-white rounded-lg overflow-hidden cursor-pointer shadow-lg relative" onClick={onClick}>
+         {isEnrolled && (
+          <div className="absolute top-2 left-2 bg-green-600 text-white text-xs font-bold py-1 px-2 rounded z-10">
+            Enrolled
+          </div>
+        )}
         {showDeleteButton && (
           <button
             onClick={handleDelete}
@@ -70,7 +76,7 @@ const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe, onClick })
 
           <h1 className="text-lg text-black font-bold mt-2">{course.title}</h1>
 
-          <div className="flex items-center mt-2 space-x-2">
+          {/* <div className="flex items-center mt-2 space-x-2">
             <div className="flex items-center">
               {Array(5).fill(0).map((_, i) => (
                 <FaStar key={i} className="w-4 h-4 text-yellow-600" />
@@ -79,6 +85,29 @@ const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe, onClick })
             <span className="text-base text-orange-800 font-semibold">
               ({course.reviewNumber || 0} Reviews)
             </span>
+          </div> */}
+ {/* Rating Section */}
+          <div className="flex items-center mt-2 space-x-2">
+            <div className="flex items-center">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <FaStar 
+                  key={star}
+                  className={`w-4 h-4 ${
+                    star <= Math.round(course.averageRating || 0) 
+                      ? 'text-yellow-600' 
+                      : 'text-gray-300'
+                  }`}
+                />
+              ))}
+            </div>
+            <span className="text-base text-orange-800 font-semibold">
+              ({course.reviewNumber || 0} {course.reviewNumber === 1 ? 'review' : 'reviews'})
+            </span>
+            {course.averageRating > 0 && (
+              <span className="text-base font-semibold text-gray-700">
+                {course.averageRating.toFixed(1)}/5
+              </span>
+            )}
           </div>
 
           <div className="mt-6 mb-6 w-full h-[2px] bg-gray-500 opacity-15"></div>
@@ -94,17 +123,20 @@ const CourseCard = ({ course, currentUserRole, onDelete, onSubscribe, onClick })
             </div>
           </div>
 
-          {currentUserRole === "user" && onSubscribe && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSubscribe();
-              }}
-              className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
-            >
-              Subscribe
-            </button>
-          )}
+          {(currentUserRole === "user" || currentUserRole === "tutor") && 
+  !isEnrolled && 
+  !isOwner && 
+  onSubscribe && (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onSubscribe();
+      }}
+      className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded"
+    >
+      Subscribe
+    </button>
+)}
         </div>
       </div>
     </Tilt>
@@ -172,32 +204,111 @@ export default function CoursesPage() {
       }));
     }
   };
+const handleAddCourse = async (e) => {
+  e.preventDefault();
+  // Client-side validation for unique title
+  const titleExists = courses.some(
+    course => course.title.toLowerCase() === newCourse.title.toLowerCase()
+  );
+  
+  if (titleExists) {
+    alert("A course with this title already exists. Please choose a different title.");
+    return;
+  }
+  try {
+    const formData = new FormData();
+    formData.append("title", newCourse.title);
+    formData.append("category", newCourse.category);
+    formData.append("price", newCourse.price);
+    formData.append("lessons", newCourse.slidesVideoFiles.length);
+    formData.append("description", newCourse.description || "");
+    
+    if (newCourse.imageFile) {
+      formData.append("image", newCourse.imageFile);
+    }
+    
+    newCourse.slidesVideoFiles.forEach(file => {
+      formData.append("slidesVideoFiles", file);
+    });
 
-  const handleAddCourse = async (e) => {
-    e.preventDefault();
-    try {
-      const formData = new FormData();
-      formData.append("title", newCourse.title);
-      formData.append("category", newCourse.category);
-      formData.append("price", newCourse.price);
-      formData.append("lessons", newCourse.slidesVideoFiles.length);
-      
-      if (newCourse.imageFile) formData.append("image", newCourse.imageFile);
-      
-      newCourse.slidesVideoFiles.forEach(file => formData.append("slidesVideoFiles", file));
-
-      const response = await fetch("/api/courses", { method: "POST", body: formData });
-      if (!response.ok) throw new Error('Failed to add course');
-      
-      const result = await response.json();
-      setCourses(prev => [...prev, result]);
-      setNewCourse({ title: "", category: "", price: 0, image: "", slidesVideoFiles: [] });
-      setShowAddCourseForm(false);
-      alert("Course added successfully!");
-    } catch (err) {
+    const response = await fetch("/api/courses", { 
+      method: "POST", 
+      body: formData 
+    });
+    
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to add course');
+    }
+    
+    const result = await response.json();
+    setCourses(prev => [...prev, result]);
+    setNewCourse({ 
+      title: "", 
+      category: "", 
+      price: 0, 
+      image: "", 
+      slidesVideoFiles: [],
+      description: "",
+      imageFile: null
+    });
+    setShowAddCourseForm(false);
+    alert("Course added successfully!");
+  } catch (err) {
+    if (err.message.includes("title already exists")) {
+      alert("A course with this title already exists. Please choose a different title.");
+    } else {
+      console.error('Add course error:', err);
       alert(`Error: ${err.message}`);
     }
+  }
+};
+// Add this state
+const [titleAvailable, setTitleAvailable] = useState(true);
+
+// Add this effect to check title availability
+useEffect(() => {
+  if (newCourse.title.trim() === '') {
+    setTitleAvailable(true);
+    return;
+  }
+  
+  const checkTitle = async () => {
+    const exists = courses.some(
+      course => course.title.toLowerCase() === newCourse.title.toLowerCase()
+    );
+    setTitleAvailable(!exists);
   };
+  
+  const timer = setTimeout(checkTitle, 500);
+  return () => clearTimeout(timer);
+}, [newCourse.title, courses]);
+
+  // const handleAddCourse = async (e) => {
+  //   e.preventDefault();
+  //   try {
+  //     const formData = new FormData();
+  //     formData.append("title", newCourse.title);
+  //     formData.append("category", newCourse.category);
+  //     formData.append("price", newCourse.price);
+  //     formData.append("lessons", newCourse.slidesVideoFiles.length);
+      
+  //     if (newCourse.imageFile) formData.append("image", newCourse.imageFile);
+      
+  //     newCourse.slidesVideoFiles.forEach(file => formData.append("slidesVideoFiles", file));
+
+  //     const response = await fetch("/api/courses", { method: "POST", body: formData });
+  //     if (!response.ok) throw new Error('Failed to add course');
+      
+  //     const result = await response.json();
+  //     setCourses(prev => [...prev, result]);
+  //     setNewCourse({ title: "", category: "", price: 0, image: "", slidesVideoFiles: [] });
+  //     setShowAddCourseForm(false);
+  //     alert("Course added successfully!");
+  //   } catch (err) {
+  //     alert(`Error: ${err.message}`);
+  //   }
+  // };
 
   const handleRemoveFile = (indexToRemove) => {
     setNewCourse(prev => ({
@@ -264,64 +375,66 @@ export default function CoursesPage() {
          {/* My Courses Section */}
 {(currentUserRole === "user" || currentUserRole === "tutor") && (
   <div className="mb-16">
-    <h1 className="text-4xl md:text-5xl text-white font-bold mb-6">
-      {currentUserRole === "tutor" ? "My Created Courses" : "My Enrolled Courses"}
-    </h1>
-
-    {currentUserRole === "tutor" ? (
-      /* Tutor's view - show created courses */
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-        {myUploadedCourses.length > 0 ? (
-          myUploadedCourses.map(course => (
-            <CourseCard
-              key={course._id}
-              course={course}
-              currentUserRole={currentUserRole}
-              onDelete={() => handleDeleteCourse(course._id)}
-              onClick={() => router.push(`/courses/${course._id}`)}
-              isEnrolled={false} // Tutors don't need enrollment status for their own courses
-
-            />
-          ))
-        ) : (
-          <div className="col-span-3 text-center py-8">
-            <p className="text-xl text-white/80">
-              You haven't created any courses yet.
-            </p>
-          </div>
-        )}
-      </div>
-    ) : (
-      /* User's view - show enrolled courses */
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
-        {courses.filter(course => 
-          session?.user?.userCourses?.some(
-            enrolledId => enrolledId.toString() === course._id.toString()
-          )
-        ).length > 0 ? (
-          courses
-            .filter(course => 
-              session?.user?.userCourses?.some(
-                enrolledId => enrolledId.toString() === course._id.toString()
-              )
-            )
-            .map(course => (
+    {/* Show tutor's created courses */}
+    {currentUserRole === "tutor" && (
+      <>
+        <h1 className="text-4xl md:text-5xl text-white font-bold mb-6">My Created Courses</h1>
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+          {myUploadedCourses.length > 0 ? (
+            myUploadedCourses.map(course => (
               <CourseCard
                 key={course._id}
                 course={course}
                 currentUserRole={currentUserRole}
+                onDelete={() => handleDeleteCourse(course._id)}
                 onClick={() => router.push(`/courses/${course._id}`)}
+                isEnrolled={false}
               />
             ))
-        ) : (
-          <div className="col-span-3 text-center py-8">
-            <p className="text-xl text-white/80">
-              You haven't enrolled in any courses yet.
-            </p>
-          </div>
-        )}
-      </div>
+          ) : (
+            <div className="col-span-3 text-center py-8">
+              <p className="text-xl text-white/80">
+                You haven't created any courses yet.
+              </p>
+            </div>
+          )}
+        </div>
+      </>
     )}
+
+    {/* Show enrolled courses for both users and tutors */}
+    <h1 className="text-4xl md:text-5xl text-white font-bold mb-6 mt-12">
+      My Enrolled Courses
+    </h1>
+    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-10">
+      {courses.filter(course => 
+        course.students?.some(
+          studentId => studentId.toString() === session?.user?.id
+        )
+      ).length > 0 ? (
+        courses
+          .filter(course => 
+            course.students?.some(
+              studentId => studentId.toString() === session?.user?.id
+            )
+          )
+          .map(course => (
+            <CourseCard
+              key={course._id}
+              course={course}
+              currentUserRole={currentUserRole}
+              onClick={() => router.push(`/courses/${course._id}`)}
+              isEnrolled={true}
+            />
+          ))
+      ) : (
+        <div className="col-span-3 text-center py-8">
+          <p className="text-xl text-white/80">
+            You haven't enrolled in any courses yet.
+          </p>
+        </div>
+      )}
+    </div>
   </div>
 )}
 
@@ -345,7 +458,7 @@ export default function CoursesPage() {
               <form action="/api/courses" 
   method="POST" 
   encType="multipart/form-data" onSubmit={handleAddCourse} className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="flex flex-col">
+                {/* <div className="flex flex-col">
                   <label className="text-xl font-semibold mb-2">Course Title*</label>
                   <input
                     type="text"
@@ -356,8 +469,26 @@ export default function CoursesPage() {
                     className="p-4 rounded-lg w-full bg-white/10 text-white border-2 border-transparent focus:outline-none focus:ring-4 focus:ring-purple-600 placeholder:text-white/70"
                     required
                   />
-                </div>
-
+                </div> */}
+<div className="flex flex-col">
+  <label className="text-xl font-semibold mb-2">Course Title*</label>
+  <input
+    type="text"
+    name="title"
+    value={newCourse.title}
+    onChange={handleInputChange}
+    placeholder="Enter Course Title"
+    className={`p-4 rounded-lg w-full bg-white/10 text-white border-2 ${
+      newCourse.title && !titleAvailable 
+        ? 'border-red-500' 
+        : 'border-transparent focus:ring-4 focus:ring-purple-600'
+    } focus:outline-none placeholder:text-white/70`}
+    required
+  />
+  {newCourse.title && !titleAvailable && (
+    <p className="text-red-500 mt-1">This title is already taken</p>
+  )}
+</div>
                 <div className="flex flex-col">
                   <label className="text-xl font-semibold mb-2">Category*</label>
                   <input
@@ -444,8 +575,11 @@ export default function CoursesPage() {
                 <div className="col-span-2 flex justify-center mt-8">
                   <button
                     type="submit"
-                    className="bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 dark:from-[#1a202c] dark:to-[#1a202c] hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-xl transition duration-300 transform hover:scale-105"
-                  >
+                    disabled={!titleAvailable}
+  className={`bg-gradient-to-r from-purple-700 to-indigo-600 hover:from-purple-800 dark:from-[#1a202c] dark:to-[#1a202c] hover:to-indigo-700 text-white font-semibold py-3 px-6 rounded-lg shadow-xl transition duration-300 transform hover:scale-105 ${
+    !titleAvailable ? 'opacity-50 cursor-not-allowed' : ''
+  }`}
+>
                     Add Course
                   </button>
                 </div>
@@ -474,7 +608,7 @@ export default function CoursesPage() {
           </div>
 
           {/* Courses Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-10">
+          {/* <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-10">
             {filteredCourses.map(course => (
               <CourseCard
                 key={course._id}
@@ -485,7 +619,28 @@ export default function CoursesPage() {
                 onClick={() => router.push(`/courses/${course._id}`)}
               />
             ))}
-          </div>
+          </div> */}
+          {/* Update the Courses Grid section */}
+<div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-10">
+  {filteredCourses.map(course => {
+    const isEnrolled = course.students?.some(
+      studentId => studentId.toString() === session?.user?.id
+    );
+    const isOwner = course.author?._id?.toString() === session?.user?.id;
+    
+    return (
+      <CourseCard
+        key={course._id}
+        course={course}
+        currentUserRole={currentUserRole}
+        onDelete={() => handleDeleteCourse(course._id)}
+        onSubscribe={() => handleSubscribe(course._id)}
+        onClick={() => router.push(`/courses/${course._id}`)}
+        isEnrolled={isEnrolled}
+      />
+    );
+  })}
+</div>
         </div>
       </div>
     </div>

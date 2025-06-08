@@ -5,7 +5,7 @@ const courseSchema = new mongoose.Schema(
   {
     users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }],
 
-    title: { type: String, required: true },
+    title: { type: String, required: true , unique: true  },
     category: { type: String },
     price: { type: Number },
     author: {
@@ -16,6 +16,22 @@ const courseSchema = new mongoose.Schema(
     lessons: { type: Number },
     students: { type: Number, default: 0 },
     reviewNumber: { type: Number, default: 0 },
+ratings: [{
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5
+  }
+}],
+averageRating: { type: Number, default: 0 },
+reviewNumber: { type: Number, default: 0 },
+
     image: { type: String },
     description: String,
     students: [
@@ -45,6 +61,7 @@ const courseSchema = new mongoose.Schema(
   }
 );
 
+courseSchema.index({ title: 1 }, { unique: true });
 
 
   export default mongoose.models.Course || mongoose.model('Course', courseSchema);

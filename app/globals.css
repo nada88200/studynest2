@@ -385,3 +385,11 @@ html.dark div:not(.login-page) {
     @apply bg-background text-foreground;
   }
 }
+
+button[disabled] {
+  cursor: not-allowed;
+}
+button:not([disabled]) {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
