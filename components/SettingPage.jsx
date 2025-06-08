@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Nav } from "@/Home/Navbar/Nav";
+import { Nav}  from "@/Home/Navbar/Nav";
 import { FaSignOutAlt, FaTrash, FaChalkboardTeacher } from "react-icons/fa";
 
 export default function SettingsPage() {

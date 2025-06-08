@@ -1,3 +1,4 @@
+//component/RegisterForm.jsx
 "use client";
 import Link from "next/link";
 import { useState } from "react";
@@ -12,6 +13,7 @@ export default function RegisterForm() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
 
     if (!name || !email || !password) {
       setError("All fields are required");
