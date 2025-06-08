@@ -51,51 +51,53 @@ export async function POST(request) {
 
 export async function GET(request) {
     const session = await getServerSession(authOptions);
-    if (!session) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search');
+    const type = searchParams.get('type');
   
     try {
       await connectMongoDB();
-      const { searchParams } = new URL(request.url);
-      const search = searchParams.get('search');
-      const type = searchParams.get('type');
-  
+      
       let query = {};
-  
-      // Apply filters if provided
+      
+      // Apply search filter if provided
       if (search) {
-        query.$text = { $search: search };
-      }
-      if (type) {
-        query.type = type;
-      }
-  
-      // For non-admins, filter private communities they don't belong to
-      const user = await User.findById(session.user.id);
-      if (!user.role === 'admin') {
         query.$or = [
-          { type: 'public' },
-          { 
-            type: 'private',
-            $or: [
-              { creator: session.user.id },
-              { members: session.user.id }
-            ]
-          }
+          { name: { $regex: search, $options: 'i' } },
+          { description: { $regex: search, $options: 'i' } }
         ];
       }
-  
-      const communities = await Community.find(query)
-        .populate('creator', 'name email')
-        .populate('members', 'name email')
-        .sort({ createdAt: -1 });
-  
+      
+      // Apply type filter if provided
+      if (type && type !== 'all') {
+        query.type = type;
+      }
+      
+      // Find communities with basic info
+      let communities = await Community.find(query)
+        .populate('creator', 'name')
+        .populate('members', 'name');
+      
+      // Filter private communities if user is not logged in
+      if (!session) {
+        communities = communities.filter(c => c.type === 'public');
+      } 
+      // Filter private communities for logged-in users
+      else {
+        communities = communities.filter(c => {
+          if (c.type === 'public') return true;
+          // Check if user is creator or member
+          const isCreator = c.creator?._id.toString() === session.user.id;
+          const isMember = c.members.some(m => m._id.toString() === session.user.id);
+          return isCreator || isMember;
+        });
+      }
+      
       return NextResponse.json(communities);
     } catch (error) {
       console.error('Error fetching communities:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch communities' },
+        { error: 'Internal server error' },
         { status: 500 }
       );
     }

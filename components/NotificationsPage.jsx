@@ -117,7 +117,8 @@ export default function NotificationsPage() {
       const updatedNotifications = await fetch("/api/notifications").then(res => res.json());
       setNotifications(updatedNotifications);
       
-      toast.success(data.message || "Successfully joined the community!");
+      // Removed the toast.success() line
+      
     } catch (error) {
       console.error("Error accepting invite:", error);
       toast.error(error.message);
@@ -126,7 +127,7 @@ export default function NotificationsPage() {
     }
   };
 
-  
+
   const handleRejectInvite = async (notification) => {
     setProcessingInvites(prev => ({...prev, [notification._id]: true}));
     

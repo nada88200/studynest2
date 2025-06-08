@@ -5,7 +5,6 @@ import User from '@/models/user';
 import connectMongoDB from "@/lib/mongodb";
 import { NextResponse } from 'next/server';
 
-// Join a public community or accept invite to private community
 export async function POST(request, { params }) {
   const session = await getServerSession(authOptions);
   if (!session) {
@@ -14,74 +13,50 @@ export async function POST(request, { params }) {
 
   try {
     await connectMongoDB();
-    const community = await Community.findById(params.id);
+    const communityId = params.id;
+    const { userId } = await request.json();
 
+    // Find the community
+    const community = await Community.findById(communityId);
     if (!community) {
       return NextResponse.json({ error: 'Community not found' }, { status: 404 });
     }
 
-    const user = await User.findById(session.user.id);
+    // Check if user is already a member
+    const isMember = community.members.some(member => 
+      member.toString() === userId
+    );
 
-    // Check if already a member
-    if (community.members.includes(session.user.id)) {
-      return NextResponse.json({ error: 'Already a member of this community' }, { status: 400 });
-    }
-
-    // For private communities, check if user has an invite
-    if (community.type === 'private') {
-      const hasInvite = user.communityInvites?.some(
-        invite => invite.community.toString() === params.id && invite.status === 'pending'
+    if (isMember) {
+      return NextResponse.json(
+        { error: 'User is already a member' },
+        { status: 400 }
       );
-      
-      if (!hasInvite) {
-        return NextResponse.json(
-          { error: 'Invitation required to join private community' },
-          { status: 403 }
-        );
-      }
     }
 
     // Add user to community members
-    community.members.push(session.user.id);
+    community.members.push(userId);
     await community.save();
 
-    // Initialize communities array if it doesn't exist
-    if (!user.communities) {
-      user.communities = [];
-    }
-
     // Add community to user's communities
-    user.communities.push(community._id);
-    
-    // Update invite status if it was a private community
-    if (community.type === 'private') {
-      // Initialize communityInvites array if it doesn't exist
-      if (!user.communityInvites) {
-        user.communityInvites = [];
-      }
+    await User.findByIdAndUpdate(userId, {
+      $addToSet: { communities: communityId }
+    });
 
-      const inviteIndex = user.communityInvites.findIndex(
-        invite => invite.community.toString() === params.id
-      );
-      if (inviteIndex !== -1) {
-        user.communityInvites[inviteIndex].status = 'accepted';
-      }
-    }
-    
-    await user.save();
+    return NextResponse.json(
+      { success: true, message: 'Successfully joined community' },
+      { status: 200 }
+    );
 
-    return NextResponse.json({ message: 'Successfully joined community' });
   } catch (error) {
     console.error('Error joining community:', error);
     return NextResponse.json(
-      { error: 'Failed to join community' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
-
-// Leave a community
-export async function DELETE(request, { params }) {
+export async function GET(request, { params }) {
   const session = await getServerSession(authOptions);
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -89,41 +64,89 @@ export async function DELETE(request, { params }) {
 
   try {
     await connectMongoDB();
-    const community = await Community.findById(params.id);
+    const communityId = params.id;
+
+    const community = await Community.findById(communityId)
+      .populate({
+        path: 'members',
+        select: 'name email _id', // Make sure to include _id
+        model: User
+      });
 
     if (!community) {
       return NextResponse.json({ error: 'Community not found' }, { status: 404 });
     }
 
-    // Check if user is a member
-    if (!community.members.includes(session.user.id)) {
-      return NextResponse.json({ error: 'Not a member of this community' }, { status: 400 });
-    }
-
-    // Remove user from community members (unless they're the creator)
-    if (community.creator.toString() === session.user.id) {
-      return NextResponse.json(
-        { error: 'Community creator cannot leave. Transfer ownership or delete community.' },
-        { status: 403 }
-      );
-    }
-
-    community.members = community.members.filter(
-      memberId => memberId.toString() !== session.user.id
-    );
-    await community.save();
-
-    // Remove community from user's communities
-    await User.findByIdAndUpdate(session.user.id, {
-      $pull: { communities: community._id }
-    });
-
-    return NextResponse.json({ message: 'Successfully left community' });
+    // Ensure we always return an array, even if members is null/undefined
+    const members = Array.isArray(community.members) ? community.members : [];
+    
+    return NextResponse.json(members);
   } catch (error) {
-    console.error('Error leaving community:', error);
-    return NextResponse.json(
-      { error: 'Failed to leave community' },
-      { status: 500 }
-    );
+    console.error('Error fetching community members:', error);
+    return NextResponse.json([], { status: 500 }); // Return empty array on error
   }
 }
+
+
+// Add this to your existing route file
+export async function DELETE(request, { params }) {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  
+    try {
+      await connectMongoDB();
+      const communityId = params.id;
+      const userId = session.user.id;
+  
+      // Find the community
+      const community = await Community.findById(communityId);
+      if (!community) {
+        return NextResponse.json({ error: 'Community not found' }, { status: 404 });
+      }
+  
+      // Check if user is the creator
+      if (community.creator.toString() === userId) {
+        return NextResponse.json(
+          { error: 'Community creator cannot leave the community' },
+          { status: 400 }
+        );
+      }
+  
+      // Check if user is a member
+      const isMember = community.members.some(member => 
+        member.toString() === userId
+      );
+  
+      if (!isMember) {
+        return NextResponse.json(
+          { error: 'User is not a member of this community' },
+          { status: 400 }
+        );
+      }
+  
+      // Remove user from community members
+      community.members = community.members.filter(member => 
+        member.toString() !== userId
+      );
+      await community.save();
+  
+      // Remove community from user's communities
+      await User.findByIdAndUpdate(userId, {
+        $pull: { communities: communityId }
+      });
+  
+      return NextResponse.json(
+        { success: true, message: 'Successfully left community' },
+        { status: 200 }
+      );
+  
+    } catch (error) {
+      console.error('Error leaving community:', error);
+      return NextResponse.json(
+        { error: 'Internal server error' },
+        { status: 500 }
+      );
+    }
+  }

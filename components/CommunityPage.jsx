@@ -77,21 +77,20 @@ export default function CommunitiesPage() {
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
 
-
-
+  const [showMembers, setShowMembers] = useState(false);
+  const [communityMembers, setCommunityMembers] = useState([]);
+  const [isFetchingMembers, setIsFetchingMembers] = useState(false);
 
   const checkMembership = (community) => {
-    if (!community?.members) return false;
+    if (!community?.members || !session?.user?.id) return false;
     
-   
-    const userId = session?.user?.id?.toString();
-    return community.members.some(member => 
-      (member?._id?.toString() === userId || 
-       member?.toString() === userId)
-    );
+    const userId = session.user.id.toString();
+    return community.members.some(member => {
+      const memberId = member?._id?.toString() || member?.toString();
+      return memberId === userId;
+    });
   };
   
-
   useEffect(() => {
     const fetchCommunities = async () => {
       setIsLoading(true);
@@ -105,7 +104,16 @@ export default function CommunitiesPage() {
         if (params.toString()) url += `?${params.toString()}`;
         
         const res = await fetch(url);
-        const data = await res.json();
+        let data = await res.json();
+        
+        // Filter private communities based on membership
+        data = data.filter(community => {
+          if (community.type === 'public') return true;
+          // Show private community if user is creator or member
+          const isCreator = community.creator?._id === session?.user?.id;
+          const isMember = checkMembership(community);
+          return isCreator || isMember;
+        });
         
         if (selectedCommunity) {
           const updatedSelected = data.find(c => c._id === selectedCommunity._id);
@@ -123,7 +131,7 @@ export default function CommunitiesPage() {
     };
     
     fetchCommunities();
-  }, [searchTerm, communityTypeFilter]);
+  }, [searchTerm, communityTypeFilter, session?.user?.id]);
 
   useEffect(() => {
     if (!selectedCommunity) return;
@@ -189,7 +197,6 @@ export default function CommunitiesPage() {
     }
   };
 
-
   const handleSendInvite = async () => {
     if (!inviteEmail.trim()) {
       alert('Please enter a valid email');
@@ -222,7 +229,6 @@ export default function CommunitiesPage() {
   const handleSendMessage = async (e) => {
     e.preventDefault();
     
-    // Validation checks
     if (!newMessage.trim()) {
       alert('Message cannot be empty');
       return;
@@ -234,13 +240,6 @@ export default function CommunitiesPage() {
     }
   
     try {
-      // Debug log before sending
-      console.log('Attempting to send message:', {
-        communityId: selectedCommunity._id,
-        text: newMessage,
-        sender: session?.user?.id
-      });
-  
       const response = await fetch(`/api/communities/${selectedCommunity._id}/messages`, {
         method: 'POST',
         headers: {
@@ -248,8 +247,8 @@ export default function CommunitiesPage() {
         },
         body: JSON.stringify({
           text: newMessage,
-          senderId: session?.user?.id, // Explicit sender ID
-          communityId: selectedCommunity._id // Explicit community ID
+          senderId: session?.user?.id,
+          communityId: selectedCommunity._id
         }),
       });
   
@@ -261,17 +260,14 @@ export default function CommunitiesPage() {
       }
   
       const sentMessage = await response.json();
-      console.log('Message sent successfully:', sentMessage);
   
-      // Update local state optimistically
       setMessages(prev => [...prev, {
         ...sentMessage,
         sender: { _id: session?.user?.id, name: session?.user?.name }
       }]);
       
-      setNewMessage(''); // Clear input field
+      setNewMessage('');
   
-      // Scroll to bottom
       setTimeout(() => {
         const chatContainer = document.getElementById('chat-messages');
         if (chatContainer) chatContainer.scrollTop = chatContainer.scrollHeight;
@@ -282,32 +278,25 @@ export default function CommunitiesPage() {
       alert('Failed to send message. Please try again.');
     }
   };
-
   
   const handleJoinCommunity = async (communityId) => {
     setIsJoining(true);
     try {
-      console.log('Joining community:', communityId, 'User ID:', session?.user?.id);
-      
       const res = await fetch(`/api/communities/${communityId}/members`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ userId: session?.user?.id }), // Explicitly send user ID
+        body: JSON.stringify({ userId: session?.user?.id }),
       });
       
       if (!res.ok) {
         const errorData = await res.json();
-        console.error('Join failed:', errorData);
         throw new Error(errorData.message || 'Failed to join community');
       }
   
-      const updatedCommunity = await res.json(); // Assume backend returns updated community
+      const updatedCommunity = await res.json();
       
-      console.log('Updated community data:', updatedCommunity);
-      
-      // Update all relevant states
       setSelectedCommunity(updatedCommunity);
       setCommunities(prev => 
         prev.map(community => 
@@ -315,13 +304,9 @@ export default function CommunitiesPage() {
         )
       );
       
-      // Refresh messages
       const messagesRes = await fetch(`/api/communities/${communityId}/messages`);
       const updatedMessages = await messagesRes.json();
       setMessages(updatedMessages);
-      
-      console.log('Post-join verification - is member now?', 
-        updatedCommunity.members.includes(session?.user?.id));
       
     } catch (error) {
       console.error('Error joining community:', error);
@@ -343,11 +328,9 @@ export default function CommunitiesPage() {
         throw new Error('Failed to leave community');
       }
       
-      // Refresh communities list
       const updated = await fetch('/api/communities').then(res => res.json());
       setCommunities(updated);
       
-      // If this was the selected community, clear it
       if (selectedCommunity?._id === communityId) {
         setSelectedCommunity(null);
         setMessages([]);
@@ -355,6 +338,46 @@ export default function CommunitiesPage() {
     } catch (error) {
       console.error('Error leaving community:', error);
       alert(error.message);
+    }
+  };
+
+  const handleDeleteCommunity = async (communityId) => {
+    if (!confirm('Are you sure you want to delete this community? This action cannot be undone.')) return;
+    
+    try {
+      const res = await fetch(`/api/communities/${communityId}`, {
+        method: 'DELETE',
+      });
+  
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Failed to delete community');
+      }
+  
+      const updatedCommunities = await fetch('/api/communities').then(res => res.json());
+      setCommunities(updatedCommunities);
+      
+      if (selectedCommunity?._id === communityId) {
+        setSelectedCommunity(null);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error deleting community:', error);
+      alert(error.message);
+    }
+  };
+
+  const fetchMemberDetails = async (communityId) => {
+    setIsFetchingMembers(true);
+    try {
+      const res = await fetch(`/api/communities/${communityId}/members`);
+      const data = await res.json();
+      setCommunityMembers(data);
+    } catch (error) {
+      console.error('Error fetching members:', error);
+      alert('Failed to fetch members');
+    } finally {
+      setIsFetchingMembers(false);
     }
   };
 
@@ -509,7 +532,7 @@ export default function CommunitiesPage() {
                     </span>
                   </div>
                   <div className='mt-3 flex gap-2'>
-                  {checkMembership(selectedCommunity) ? (
+                    {checkMembership(selectedCommunity) ? (
                       <button
                         onClick={() => handleLeaveCommunity(selectedCommunity._id)}
                         className='px-3 py-1 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-lg text-sm hover:bg-red-200 dark:hover:bg-red-800 transition'
@@ -529,70 +552,17 @@ export default function CommunitiesPage() {
                     )}
                   </div>
                   {selectedCommunity?.type === 'private' && checkMembership(selectedCommunity) && (
-  <button
-    onClick={() => setIsInviteModalOpen(true)}
-    className="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition mt-3"
-  >
-    Invite Members
-  </button>
-)}
-
-{isInviteModalOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
-      <div className="flex justify-between items-center border-b dark:border-gray-700 p-4">
-        <h3 className="text-lg font-bold">Invite to Community</h3>
-        <button 
-          onClick={() => {
-            setIsInviteModalOpen(false);
-            setInviteEmail('');
-          }}
-          className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-        >
-          <FaTimes />
-        </button>
-      </div>
-      
-      <div className="p-4 space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">Email Address</label>
-          <input
-            type="email"
-            value={inviteEmail}
-            onChange={(e) => setInviteEmail(e.target.value)}
-            className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
-            placeholder="Enter user's email"
-            required
-          />
-        </div>
-        
-        <div className="pt-4 flex justify-end gap-3">
-          <button
-            type="button"
-            onClick={() => {
-              setIsInviteModalOpen(false);
-              setInviteEmail('');
-            }}
-            className="px-4 py-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSendInvite}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
-          >
-            Send Invite
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-)}
-
+                    <button
+                      onClick={() => setIsInviteModalOpen(true)}
+                      className="px-3 py-1 bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm hover:bg-blue-200 dark:hover:bg-blue-800 transition mt-3"
+                    >
+                      Invite Members
+                    </button>
+                  )}
                 </div>
 
                 <div id='chat-messages' className='flex-1 overflow-y-auto space-y-4 mb-4'>
-                   {Array.isArray(messages) && messages.map((msg) => (
+                  {Array.isArray(messages) && messages.map((msg) => (
                     <div 
                       key={msg._id} 
                       className={`flex gap-3 ${
@@ -633,30 +603,29 @@ export default function CommunitiesPage() {
                 </div>
 
                 {checkMembership(selectedCommunity) ? (
-  <form onSubmit={handleSendMessage} className='mt-auto'>
-    <div className='flex gap-2'>
-      <input
-        type='text'
-        placeholder='Type a message...'
-        value={newMessage}
-        onChange={(e) => setNewMessage(e.target.value)}
-        className='flex-1 p-3 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500'
-      />
-      <button 
-        type='submit' 
-        className='bg-purple-700 hover:bg-purple-800 p-3 text-white rounded-lg transition duration-300'
-        disabled={!newMessage.trim()}
-      >
-        Send
-      </button>
-    </div>
-  </form>
-) : (
-  <div className='mt-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center'>
-    {console.log('Rendering join prompt - Current user:', session?.user?.id, 'Members:', selectedCommunity?.members)}
-    Join this community to participate in the conversation
-  </div>
-)}
+                  <form onSubmit={handleSendMessage} className='mt-auto'>
+                    <div className='flex gap-2'>
+                      <input
+                        type='text'
+                        placeholder='Type a message...'
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        className='flex-1 p-3 rounded-lg border dark:border-gray-700 bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500'
+                      />
+                      <button 
+                        type='submit' 
+                        className='bg-purple-700 hover:bg-purple-800 p-3 text-white rounded-lg transition duration-300'
+                        disabled={!newMessage.trim()}
+                      >
+                        Send
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className='mt-4 p-3 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200 rounded-lg text-center'>
+                    Join this community to participate in the conversation
+                  </div>
+                )}
               </div>
             ) : (
               <div className='flex flex-col items-center justify-center h-full text-gray-500 dark:text-gray-400'>
@@ -704,10 +673,60 @@ export default function CommunitiesPage() {
                     </div>
                     <div className='flex justify-between'>
                       <span className='text-gray-600 dark:text-gray-400'>Members:</span>
-                      <span className='font-medium flex items-center gap-1'>
+                      <button 
+                        onClick={() => {
+                          setShowMembers(!showMembers);
+                          if (!showMembers) {
+                            fetchMemberDetails(selectedCommunity._id);
+                          }
+                        }}
+                        className='font-medium flex items-center gap-1 hover:text-purple-500 transition'
+                      >
                         <FaUsers /> {selectedCommunity.members?.length || 0}
-                      </span>
+                      </button>
                     </div>
+                    {showMembers && (
+                      <div className="mt-4 border-t dark:border-gray-700 pt-4">
+                        <div className="flex justify-between items-center mb-3">
+                          <h4 className="font-bold">Community Members</h4>
+                          <button 
+                            onClick={() => setShowMembers(false)}
+                            className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                          >
+                            Close
+                          </button>
+                        </div>
+                        
+                        {isFetchingMembers ? (
+                          <div className="flex justify-center py-4">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-500"></div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3 max-h-60 overflow-y-auto">
+                            {communityMembers.length === 0 ? (
+                              <p className="text-center text-gray-500 py-4">No members found</p>
+                            ) : (
+                              communityMembers.map(member => (
+                                <div key={member._id} className="flex items-center justify-between gap-3 p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded">
+                                  <div className="flex items-center gap-3">
+                                    <Avatar name={member.name} size={8} />
+                                    <div>
+                                      <p className="font-medium">{member.name}</p>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400">{member.email}</p>
+                                    </div>
+                                  </div>
+                                  {member._id === selectedCommunity.creator?._id && (
+                                    <span className='text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 px-2 py-1 rounded-full'>
+                                      Admin
+                                    </span>
+                                  )}
+                                </div>
+                              ))
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className='flex justify-between'>
                       <span className='text-gray-600 dark:text-gray-400'>Created:</span>
                       <span className='font-medium'>
@@ -733,7 +752,16 @@ export default function CommunitiesPage() {
                   </ul>
                 </div>
 
-                {selectedCommunity.members?.includes(session?.user?.id) && (
+                {selectedCommunity.creator?._id === session?.user?.id && (
+                  <button 
+                    onClick={() => handleDeleteCommunity(selectedCommunity._id)}
+                    className='w-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 py-2 rounded-lg font-medium hover:bg-red-200 dark:hover:bg-red-800 transition duration-300'
+                  >
+                    Delete Community
+                  </button>
+                )}
+
+                {checkMembership(selectedCommunity) && (
                   <button 
                     onClick={() => handleLeaveCommunity(selectedCommunity._id)}
                     className='w-full bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-300 py-2 rounded-lg font-medium hover:bg-red-200 dark:hover:bg-red-800 transition duration-300'
@@ -837,6 +865,59 @@ export default function CommunitiesPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Invite Members Modal */}
+      {isInviteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+            <div className="flex justify-between items-center border-b dark:border-gray-700 p-4">
+              <h3 className="text-lg font-bold">Invite to Community</h3>
+              <button 
+                onClick={() => {
+                  setIsInviteModalOpen(false);
+                  setInviteEmail('');
+                }}
+                className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+              >
+                <FaTimes />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Email Address</label>
+                <input
+                  type="email"
+                  value={inviteEmail}
+                  onChange={(e) => setInviteEmail(e.target.value)}
+                  className="w-full p-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                  placeholder="Enter user's email"
+                  required
+                />
+              </div>
+              
+              <div className="pt-4 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsInviteModalOpen(false);
+                    setInviteEmail('');
+                  }}
+                  className="px-4 py-2 border rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSendInvite}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700"
+                >
+                  Send Invite
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -18,7 +18,6 @@ export default function SettingsPage() {
     confirmPassword: "",
     notifications: true,
     showPersonalInfo: true,
-    language: "English",
     theme: "normal",
   });
 
@@ -260,15 +259,7 @@ export default function SettingsPage() {
                   Language & Theme
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <select
-                    name="language"
-                    value={formData.language}
-                    onChange={handleChange}
-                    className="bg-gray-200 text-black px-4 py-2 rounded-md"
-                  >
-                    <option value="English">English</option>
-                    <option value="Arabic">Arabic</option>
-                  </select>
+                  
                   <select
                     name="theme"
                     value={formData.theme}

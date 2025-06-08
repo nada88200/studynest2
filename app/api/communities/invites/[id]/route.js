@@ -15,12 +15,9 @@ export async function POST(request, { params }) {
 
   try {
     await connectMongoDB();
-
-    console.log('All params received:', params);
-    console.log('Route params:', request.nextUrl.searchParams);
     
-    const inviteId = params.inviteId || params.id;
-    console.log("Received inviteId:", inviteId); 
+    const inviteId = params.id; // Changed from params.inviteId to params.id
+    console.log("Processing invite ID:", inviteId);
 
     // Validate inviteId format
     if (!Types.ObjectId.isValid(inviteId)) {
@@ -71,7 +68,7 @@ export async function POST(request, { params }) {
       $addToSet: { communities: community._id }
     });
 
-    // Create notification for inviter
+    // Create notification for inviter with all required metadata
     const inviterNotification = new Notification({
       recipientId: invite.invitedBy,
       senderId: session.user.id,
@@ -79,6 +76,8 @@ export async function POST(request, { params }) {
       message: `${session.user.name} has accepted your invitation to join "${community.name}"`,
       metadata: {
         communityId: community._id,
+        inviteId: invite._id,  // Make sure to include inviteId
+        inviterId: invite.invitedBy,  // Make sure to include inviterId
         action: 'accepted'
       }
     });
@@ -107,7 +106,7 @@ export async function DELETE(request, { params }) {
 
   try {
     await connectMongoDB();
-    const inviteId = params.inviteId;
+    const inviteId = params.id; // Changed from params.inviteId to params.id
 
     // Find the community with this pending invite
     const community = await Community.findOne({
@@ -116,29 +115,35 @@ export async function DELETE(request, { params }) {
     });
 
     if (!community) {
-      return NextResponse.json({ error: 'Invitation not found or expired' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Invitation not found or expired' }, 
+        { status: 404 }
+      );
     }
 
     // Find the specific invite
     const invite = community.pendingInvites.id(inviteId);
     if (!invite || invite.status !== 'pending') {
-      return NextResponse.json({ error: 'Invitation not found or already processed' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Invitation not found or already processed' },
+        { status: 400 }
+      );
     }
 
     // Update invite status to rejected
     invite.status = 'rejected';
     await community.save();
 
-    // Create notification for the inviter
+    // Create notification for the inviter with all required metadata
     const inviterNotification = new Notification({
       recipientId: invite.invitedBy,
       senderId: session.user.id,
       type: 'community_invite_response',
-      communityId: community._id,
       message: `${session.user.name} has declined your invitation to join "${community.name}"`,
       metadata: {
         communityId: community._id,
-        userId: session.user.id,
+        inviteId: invite._id,  // Make sure to include inviteId
+        inviterId: invite.invitedBy,  // Make sure to include inviterId
         action: 'rejected'
       }
     });
