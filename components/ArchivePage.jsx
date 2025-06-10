@@ -1,5 +1,7 @@
 "use client";
 
+
+import React from "react";
 import { useState, useEffect } from "react";
 import { Nav } from "@/Home/Navbar/Nav";
 import { useSession } from "next-auth/react";

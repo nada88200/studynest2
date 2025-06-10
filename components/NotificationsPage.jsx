@@ -1,6 +1,7 @@
 //components/NotificationsPage.jsx
 "use client";
 
+import React from "react";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { formatDistanceToNow } from "date-fns";
@@ -240,7 +241,7 @@ export default function NotificationsPage() {
               </button>
               <div className="border-t border-white/20 pt-4 space-y-4 max-h-[75vh] overflow-y-auto">
                 {loading ? (
-                  <div className="flex justify-center py-8">
+                  <div role="status" className="flex justify-center py-8">
                     <Loader2 className="animate-spin h-8 w-8 text-yellow-400" />
                   </div>
                 ) : filteredNotifications.length === 0 ? (
